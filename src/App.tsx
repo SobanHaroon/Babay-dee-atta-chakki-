@@ -1167,7 +1167,7 @@ export default function App() {
               className="flex items-center gap-2 cursor-pointer shrink-0 group z-10"
             >
               {/* Round emblem logo sized to match the navbar height */}
-              <div className="h-[100px] w-[52px] sm:h-[100px] sm:w-[56px] md:h-[60px] md:w-[60px] rounded-full shrink-0 flex items-center justify-center group-hover:scale-105 transition-transform overflow-hidden">
+              <div className="h-[52px] w-[52px] sm:h-[56px] sm:w-[56px] md:h-[60px] md:w-[60px] rounded-full shrink-0 flex items-center justify-center group-hover:scale-105 transition-transform overflow-hidden">
                 <Logo className="w-full h-full object-contain" showText={false} />
               </div>
               

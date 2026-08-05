@@ -34,6 +34,7 @@ import {
   Zap
 } from "lucide-react";
 import { Product, Category, Review, CartItem, Order, DEFAULT_CATEGORIES } from "./types";
+import { loadStoredReviews, saveStoredReviews, mergeStoredWithApiReviews } from "./data/reviewStorage";
 import { DELIVERY_LOCATIONS, calculateDeliveryCharge, CHARGE_PER_KM } from "./deliveryData";
 import { ProductCard } from "./components/ProductCard";
 import { FallingGrains } from "./components/FallingGrains";
@@ -138,6 +139,7 @@ export default function App() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [popularProducts, setPopularProducts] = useState<Product[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [storedReviews, setStoredReviews] = useState<Review[]>(() => loadStoredReviews());
 
   // Dynamically generated upcoming 4 days for preferred delivery picker
   const upcomingDays = React.useMemo(() => {
@@ -536,7 +538,11 @@ export default function App() {
 
         if (cats && Array.isArray(cats) && cats.length > 0) setCategories(cats);
         else setCategories(DEFAULT_CATEGORIES);
-        if (revs && Array.isArray(revs)) setReviews(revs);
+
+        const apiReviews = revs && Array.isArray(revs) ? revs : [];
+        const mergedReviews = mergeStoredWithApiReviews(apiReviews, storedReviews);
+        setReviews(mergedReviews);
+        setStoredReviews(mergedReviews);
 
         // If backend API succeeded and returned products
         if (prods && Array.isArray(prods) && prods.length > 0) {
@@ -1056,7 +1062,12 @@ export default function App() {
 
   // Handle newly added customer review dynamically
   const handleAddNewReview = (newRev: Review) => {
-    setReviews((prev) => [newRev, ...prev]);
+    setReviews((prev) => {
+      const updated = [newRev, ...prev];
+      saveStoredReviews(updated);
+      setStoredReviews(updated);
+      return updated;
+    });
   };
 
   // Filter products catalog

@@ -13,8 +13,8 @@ export function Logo({ className = "w-12 h-12", showText = false }: LogoProps) {
       <img
         src={logoImg || "/logo.jpg"}
         alt="Babay Dee Atta Chakki Logo"
-        width="96"
-        height="96"
+        width="100"
+        height="100"
         decoding="async"
         referrerPolicy="no-referrer"
         className="w-full h-full object-contain rounded-full bg-transparent"

@@ -262,11 +262,11 @@ export function ProductCard({
                     triggerFlourParticleBurst(e);
                     onAddToCart(product, selectedQty || 1, e);
                   }}
-                  className="absolute bottom-2 right-2 z-20 px-3 py-2 min-h-[44px] bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black uppercase tracking-wider rounded-xl border border-amber-300 shadow-lg flex items-center gap-1.5 transition-all active:scale-90 cursor-pointer"
+                  className="absolute bottom-2 right-2 z-20 px-3 py-2 min-h-[44px] bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black uppercase tracking-wider rounded-xl border border-amber-300 shadow-lg flex items-center justify-center transition-all active:scale-90 cursor-pointer"
                   title="One-Tap Quick Add to Cart"
                 >
                   <Zap className="w-4 h-4 fill-slate-950 shrink-0" />
-                  <span>+ Quick Add</span>
+                  <span className="hidden sm:inline">+ Quick Add</span>
                 </button>
               )}
 

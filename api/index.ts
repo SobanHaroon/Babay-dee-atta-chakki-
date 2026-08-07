@@ -424,7 +424,7 @@ app.post("/api/order/feedback", (req, res) => {
 
 app.post("/api/checkout", async (req, res) => {
   try {
-    const { name, phone, address, area, cartItems, paymentMethod, deliveryDate, deliverySlot } = req.body;
+    const { name, phone, address, neighborhood, city, area, cartItems, paymentMethod, deliveryDate, deliverySlot } = req.body;
 
     if (!name || !phone || !address) {
       return res.status(400).json({ error: "Customer name, contact phone, and complete address are required." });
@@ -435,10 +435,12 @@ app.post("/api/checkout", async (req, res) => {
       return res.status(400).json({ error: "Your basket is empty. Please add items to your basket before placing an order." });
     }
 
-    const rawArea = String(area || "Rawalpindi").trim();
+    const rawArea = String(area || city || "Rawalpindi").trim();
     const cleanArea = rawArea.toLowerCase();
     const isIslamabad = cleanArea.includes("islamabad") || cleanArea === "isb" || cleanArea.includes("islo");
     const validatedArea = isIslamabad ? "Islamabad" : (rawArea || "Rawalpindi");
+    const cleanNeighborhood = String(neighborhood || "").trim();
+    const fullAddress = [String(address || "").trim(), cleanNeighborhood, validatedArea].filter(Boolean).join(", ");
 
     const subtotal = validCartItems.reduce((acc: number, item: any) => {
       const price = typeof item.price === "number" ? item.price : parseFloat(item.price) || 0;
@@ -458,7 +460,7 @@ app.post("/api/checkout", async (req, res) => {
     const orderId = "BDEC-" + numericId;
     const newOrder = {
       id: orderId,
-      customer: { name, phone, address, area: validatedArea },
+      customer: { name, phone, address: fullAddress, area: validatedArea, neighborhood: cleanNeighborhood },
       items: validCartItems,
       paymentMethod: paymentMethod || "Cash on Delivery",
       subtotal,
@@ -480,8 +482,9 @@ app.post("/api/checkout", async (req, res) => {
     if (dbClient) {
       try {
         const serializedMetadata = {
-          address,
+          address: fullAddress,
           area: validatedArea,
+          neighborhood: cleanNeighborhood,
           paymentMethod: paymentMethod || "Cash on Delivery",
           subtotal,
           deliveryCharges,
@@ -498,7 +501,7 @@ app.post("/api/checkout", async (req, res) => {
             quantity: item.quantity
           }))
         };
-        const customerAddressValue = `${address} | METADATA:${JSON.stringify(serializedMetadata)}`;
+        const customerAddressValue = `${fullAddress} | METADATA:${JSON.stringify(serializedMetadata)}`;
         
         const now = new Date();
         const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD

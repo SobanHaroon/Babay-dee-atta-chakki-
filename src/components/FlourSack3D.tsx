@@ -292,7 +292,7 @@ export function FlourSack3D() {
     };
 
     evaluatePlatform();
-    window.addEventListener("resize", evaluatePlatform);
+    window.addEventListener("resize", evaluatePlatform, { passive: true });
     return () => {
       window.removeEventListener("resize", evaluatePlatform);
       chakkiAudio.stop(); // Safe clean-up

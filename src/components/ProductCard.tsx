@@ -51,7 +51,7 @@ function ProductHoverPopover({ product, align, isHovered, onAddToCart }: Product
     <div
       ref={popoverRef}
       className={cn(
-        "absolute top-[-20px] z-50 w-80 bg-neutral-950/95 backdrop-blur-md text-white border border-white/10 rounded-2xl shadow-2xl overflow-hidden select-none hidden md:block",
+        "absolute top-[-20px] z-50 w-80 bg-neutral-950/95 backdrop-blur-md text-white border border-white/10 rounded-2xl shadow-2xl overflow-hidden select-none hidden md:block will-change-transform",
         align === "right" ? "left-[104%]" : "right-[104%]"
       )}
       style={{
@@ -60,7 +60,7 @@ function ProductHoverPopover({ product, align, isHovered, onAddToCart }: Product
       }}
     >
       {/* Premium Media Banner */}
-      <div className="relative h-40 w-full overflow-hidden bg-gradient-to-br from-[#2f3513] via-stone-900 to-[#4d571a]/40 flex items-center justify-center p-6 border-b border-white/10">
+      <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-[#2f3513] via-stone-900 to-[#4d571a]/40 flex items-center justify-center p-6 border-b border-white/10">
         {/* Subtle decorative grid/grain texture */}
         <div className="absolute inset-0 bg-[radial-gradient(#ffffff08_1px,transparent_1px)] [background-size:16px_16px] opacity-60" />
         
@@ -72,9 +72,9 @@ function ProductHoverPopover({ product, align, isHovered, onAddToCart }: Product
           category={product.category}
           productId={product.id}
           productImage={product.productImage}
-          size={56}
+          size={92}
           className={cn(
-            "w-20 h-20 border-white/20 shadow-xl drop-shadow-[0_8px_16px_rgba(0,0,0,0.45)] transition-all duration-500",
+            "w-32 h-32 border-white/20 shadow-xl drop-shadow-[0_8px_16px_rgba(0,0,0,0.45)] transition-all duration-500 will-change-transform",
             isHovered ? "scale-105 rotate-3" : "scale-100"
           )}
         />

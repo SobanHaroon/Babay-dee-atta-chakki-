@@ -129,7 +129,7 @@ export default function App() {
   useEffect(() => {
     const interval = setInterval(() => {
       setSlideshowIndex(prev => (prev + 1) % heroImages.length);
-    }, 4500);
+    }, 5000);
     return () => clearInterval(interval);
   }, [heroImages.length]);
 
@@ -359,6 +359,7 @@ export default function App() {
     phone: "",
     address: "",
     area: "Islamabad",
+    neighborhood: "",
     paymentMethod: "Cash on Delivery",
     sendingBank: "Easypaisa (Telenor Bank)",
     transactionId: "",
@@ -656,11 +657,16 @@ export default function App() {
     checkViewport();
     window.addEventListener("resize", checkViewport);
 
-    // Track scroll
+    // Track scroll with throttling for performance
+    let lastScroll = 0;
     const handleScroll = () => {
-      setIsSticky(window.scrollY > 40);
+      const now = Date.now();
+      if (now - lastScroll > 50) { // ~20fps for scroll detection
+        setIsSticky(window.scrollY > 40);
+        lastScroll = now;
+      }
     };
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
 
     // Ensure focused elements stay visible above the soft keyboard on mobile/tablet screens
     const handleInputFocus = (e: FocusEvent) => {
@@ -715,25 +721,32 @@ export default function App() {
     };
   }, []);
 
-  // Tracking cursor movement
+  // Tracking cursor movement with throttling for performance
   useEffect(() => {
     if (!isDesktop) return;
 
+    let lastMouseMove = 0;
+    const throttleDelay = 16; // ~60fps
+
     const handleMouseMove = (e: any) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
+      const now = Date.now();
+      if (now - lastMouseMove > throttleDelay) {
+        setMousePos({ x: e.clientX, y: e.clientY });
+        lastMouseMove = now;
 
-      // Determine if cursor is currently hovering interactive nodes
-      const target = e.target as HTMLElement;
-      const isInteractive =
-        target.closest("button") ||
-        target.closest("a") ||
-        target.closest("input") ||
-        target.closest("select") ||
-        target.closest("textarea") ||
-        target.closest(".cursor-pointer") ||
-        target.getAttribute("role") === "button";
+        // Determine if cursor is currently hovering interactive nodes
+        const target = e.target as HTMLElement;
+        const isInteractive =
+          target.closest("button") ||
+          target.closest("a") ||
+          target.closest("input") ||
+          target.closest("select") ||
+          target.closest("textarea") ||
+          target.closest(".cursor-pointer") ||
+          target.getAttribute("role") === "button";
 
-      setCursorHovering(!!isInteractive);
+        setCursorHovering(!!isInteractive);
+      }
     };
 
     // Ripple click handler
@@ -741,7 +754,7 @@ export default function App() {
       setRipples((prev) => [...prev, { x: e.clientX, y: e.clientY, id: Date.now() }]);
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
     window.addEventListener("click", handleMouseClick);
 
     return () => {
@@ -750,13 +763,16 @@ export default function App() {
     };
   }, [isDesktop]);
 
-  // Save cart state to localStorage on changes
+  // Save cart state to localStorage on changes with debouncing
   useEffect(() => {
-    try {
-      localStorage.setItem("babay_dee_cart", JSON.stringify(cartItems));
-    } catch (e) {
-      console.error("Failed to save cart state to localStorage:", e);
-    }
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem("babay_dee_cart", JSON.stringify(cartItems));
+      } catch (e) {
+        console.error("Failed to save cart state to localStorage:", e);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
   }, [cartItems]);
 
   // Scroll to top smoothly when tab, checkout status, or order status changes
@@ -949,9 +965,9 @@ export default function App() {
     e.preventDefault();
     setCheckoutError("");
 
-    const { name, phone, address, area } = checkoutFormData;
-    if (!name.trim() || !phone.trim() || !address.trim()) {
-      const errMsg = "Please fill in all customer inputs (Name, Phone, Address).";
+    const { name, phone, address, area, neighborhood } = checkoutFormData;
+    if (!name.trim() || !phone.trim() || !address.trim() || !neighborhood.trim()) {
+      const errMsg = "Please fill in all customer inputs (Name, Phone, Area/Neighborhood, and Full Address).";
       setCheckoutError(errMsg);
       toast.error(errMsg);
       return;
@@ -974,11 +990,13 @@ export default function App() {
     setIsPlacingOrder(true);
     setCheckoutError("");
 
-    const { name, phone, address, area } = checkoutFormData;
+    const { name, phone, address, area, neighborhood } = checkoutFormData;
     const cleanArea = (area || "Rawalpindi").toLowerCase().trim();
     const isIslamabad = cleanArea.includes("islamabad") || cleanArea === "isb" || cleanArea.includes("islo");
     const validatedArea = isIslamabad ? "Islamabad" : (area || "Rawalpindi");
     const finalPaymentMethod = "Cash on Delivery";
+    const cleanNeighborhood = neighborhood?.trim() || "";
+    const fullAddress = [address.trim(), cleanNeighborhood, validatedArea].filter(Boolean).join(", ");
 
     const subLocObj = DELIVERY_LOCATIONS.find(l => l.city === validatedArea && l.name === selectedSubLocation);
     const dist = selectedSubLocation === "Custom" ? customDistanceKm : (subLocObj ? subLocObj.distanceKm : 6);
@@ -991,6 +1009,8 @@ export default function App() {
           name: name.trim(),
           phone: phone.trim(),
           address: address.trim(),
+          neighborhood: cleanNeighborhood,
+          city: validatedArea,
           area: validatedArea,
           cartItems,
           paymentMethod: finalPaymentMethod,
@@ -1011,9 +1031,6 @@ export default function App() {
         if (typeof window !== "undefined") {
           localStorage.setItem("last_tracking_id", data.orderId || data.order?.id);
         }
-        // Client-side backup sync & notification push to ensure 100% database & ntfy reliability
-        insertOrderToSupabase(data.order);
-        sendNtfyNotification(data.order);
       } else {
         const errMsg = data.error || "Failed to process checkout transaction. Try again.";
         setCheckoutError(errMsg);
@@ -1028,7 +1045,7 @@ export default function App() {
       const deliveryCharges = subtotal >= 3000 ? 0 : Math.round(dist * 50);
       const fallbackOrder = {
         id: fallbackOrderId,
-        customer: { name: name.trim(), phone: phone.trim(), address: address.trim(), area: validatedArea },
+        customer: { name: name.trim(), phone: phone.trim(), address: fullAddress, area: validatedArea, neighborhood: cleanNeighborhood },
         items: [...cartItems],
         paymentMethod: finalPaymentMethod,
         subtotal,

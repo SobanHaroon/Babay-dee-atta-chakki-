@@ -70,23 +70,22 @@ export function ProductDetailsModal({
     }
 
     const ctx = gsap.context(() => {
-      if (img) {
-        const scrollerEl = scrollContainer && scrollContainer.scrollHeight > scrollContainer.clientHeight
-          ? scrollContainer
-          : (backdrop && backdrop.scrollHeight > backdrop.clientHeight ? backdrop : window);
-
-        gsap.to(img, {
-          scale: 1.12,
-          y: 20,
-          ease: "none",
-          scrollTrigger: {
-            trigger: scrollContainer || modal,
-            scroller: scrollerEl,
-            start: "top top",
-            end: "bottom bottom",
-            scrub: 0.6,
-          },
-        });
+      if (img && scrollContainer) {
+        // Only apply scroll animation if content is actually scrollable
+        if (scrollContainer.scrollHeight > scrollContainer.clientHeight) {
+          gsap.to(img, {
+            scale: 1.08,
+            y: 15,
+            ease: "none",
+            scrollTrigger: {
+              trigger: scrollContainer,
+              scroller: scrollContainer,
+              start: "top top",
+              end: "bottom bottom",
+              scrub: 0.4,
+            },
+          });
+        }
       }
     }, modal || undefined);
 
@@ -127,6 +126,24 @@ export function ProductDetailsModal({
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 3);
 
+  const getModalProductDescription = (currentProduct: Product) => {
+    const category = currentProduct.category?.toLowerCase() || "";
+
+    if (category.includes("rice")) {
+      return `${currentProduct.name} is freshly sourced and carefully selected for its natural aroma, long grains, and premium cooking quality.`;
+    }
+
+    if (category.includes("lentil") || category.includes("daal") || category.includes("pulse")) {
+      return `${currentProduct.name} is freshly cleaned, sorted, and packed to bring wholesome flavor and a kitchen-ready texture to your meals.`;
+    }
+
+    if (category.includes("herb") || category.includes("special") || category.includes("supplement")) {
+      return `${currentProduct.name} is freshly sourced and chosen for purity, natural aroma, and everyday wellness.`;
+    }
+
+    return currentProduct.desc;
+  };
+
   return (
     <div
       ref={backdropRef}
@@ -151,10 +168,10 @@ export function ProductDetailsModal({
         </button>
 
         {/* Left: Product Image & 360 Viewer Stage (approx 45%) */}
-        <div className="md:w-[45%] bg-slate-50 dark:bg-slate-800/40 p-4 md:p-6 flex flex-col justify-center border-r border-slate-100 dark:border-slate-800 w-full">
+        <div className="md:w-[45%] bg-slate-50 dark:bg-slate-800/40 p-4 md:p-6 flex flex-col justify-center border-r border-slate-100 dark:border-slate-800 w-full will-change-transform">
           <div ref={imageRef} className="w-full">
-            <ProductViewer360 product={product} />
           </div>
+            <ProductViewer360 product={product} />
           <div className="mt-3 flex flex-col items-center gap-1.5">
             <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full text-xs font-semibold">
               <ShieldCheck className="w-4 h-4" />
@@ -212,7 +229,7 @@ export function ProductDetailsModal({
 
           {/* Product Description */}
           <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mb-6 font-medium">
-            {product.desc}
+            {getModalProductDescription(product)}
           </p>
 
           {/* Specifications & Nutritional Facts Tab Selection */}

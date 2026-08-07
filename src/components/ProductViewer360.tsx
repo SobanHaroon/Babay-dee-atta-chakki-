@@ -39,7 +39,7 @@ export function ProductViewer360({ product }: ProductViewer360Props) {
         onTouchStart={handleMouseDown}
         onTouchMove={handleMouseMove}
         onTouchEnd={handleMouseUp}
-        className="w-full h-64 sm:h-72 bg-gradient-to-b from-amber-500/10 to-slate-100 dark:to-slate-800 rounded-3xl p-4 flex flex-col items-center justify-center relative overflow-hidden border border-slate-200 dark:border-slate-700 select-none cursor-grab active:cursor-grabbing"
+        className="w-full h-64 sm:h-72 bg-gradient-to-b from-amber-500/10 to-slate-100 dark:to-slate-800 rounded-3xl p-4 flex flex-col items-center justify-center relative overflow-hidden border border-slate-200 dark:border-slate-700 select-none cursor-grab active:cursor-grabbing will-change-contents"
       >
         {/* Freshness & Stock Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
@@ -56,7 +56,7 @@ export function ProductViewer360({ product }: ProductViewer360Props) {
           <div className="flex flex-col items-center justify-center">
             <div
               style={{ transform: `rotateY(${rotationAngle}deg)` }}
-              className="transition-transform duration-75 ease-out"
+              className="transition-transform duration-75 ease-out will-change-transform"
             >
               <ProductIcon
                 productId={product.id}

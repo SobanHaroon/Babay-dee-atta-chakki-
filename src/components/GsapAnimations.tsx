@@ -53,7 +53,7 @@ export function GsapMagnetic({
       });
     };
 
-    el.addEventListener("mousemove", handleMouseMove);
+    el.addEventListener("mousemove", handleMouseMove, { passive: true });
     el.addEventListener("mouseleave", handleMouseLeave);
 
     return () => {

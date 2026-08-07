@@ -31,6 +31,7 @@ interface CheckoutMultiStepFormProps {
     phone: string;
     address: string;
     area: string;
+    neighborhood: string;
     paymentMethod: string;
     sendingBank: string;
     transactionId: string;
@@ -43,6 +44,7 @@ interface CheckoutMultiStepFormProps {
       phone: string;
       address: string;
       area: string;
+      neighborhood: string;
       paymentMethod: string;
       sendingBank: string;
       transactionId: string;
@@ -127,6 +129,10 @@ export function CheckoutMultiStepForm({
         errors.address = "Full home address is required.";
       } else if (checkoutFormData.address.trim().length < 5) {
         errors.address = "Please enter a detailed address (street, house #, sector).";
+      }
+
+      if (!checkoutFormData.neighborhood?.trim()) {
+        errors.neighborhood = "Please enter the area or neighborhood for delivery.";
       }
     }
 
@@ -254,7 +260,7 @@ export function CheckoutMultiStepForm({
         {/* Progress Bar Line Track */}
         <div className="relative w-full h-2.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
           <motion.div
-            className="h-full bg-gradient-to-r from-[#3b4414] via-[#5c6d20] to-amber-500 rounded-full shadow-sm relative"
+            className="h-full bg-gradient-to-r from-[#3b4414] via-[#5c6d20] to-amber-500 rounded-full shadow-sm relative will-change-transform"
             initial={{ width: "0%" }}
             animate={{ width: `${progressPercentage}%` }}
             transition={{ duration: 0.4, type: "spring", stiffness: 200, damping: 25 }}
@@ -578,30 +584,97 @@ export function CheckoutMultiStepForm({
                   </motion.div>
                 )}
 
-              {/* Custom Distance Slider */}
+              {/* Custom Area / Distance Input */}
               {checkoutFormData.area &&
                 (checkoutFormData.area === "Islamabad" || checkoutFormData.area === "Rawalpindi") &&
                 selectedSubLocation === "Custom" && (
-                  <motion.div custom={direction} variants={fieldItemVariants} className="space-y-1.5 p-3 bg-amber-50/50 border border-amber-200/60 rounded-xl">
-                    <div className="flex justify-between text-xs font-semibold text-slate-700">
-                      <span>Distance to your doorstep:</span>
-                      <span className="text-[#3b4414] font-bold">{customDistanceKm} km</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="45"
-                      step="0.5"
-                      value={customDistanceKm}
-                      onChange={(e) => setCustomDistanceKm(parseFloat(e.target.value))}
-                      className="w-full accent-[#3b4414] cursor-pointer h-1.5 bg-slate-200 rounded-lg appearance-none"
-                    />
-                    <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                      <span>1 km (Rs. 50)</span>
-                      <span>45 km (Rs. 2250)</span>
-                    </div>
-                  </motion.div>
+                  <>
+                    <motion.div custom={direction} variants={fieldItemVariants} className="space-y-1 p-3 bg-blue-50/80 border border-blue-100 rounded-xl">
+                      <p className="text-xs font-semibold text-blue-900 flex items-start gap-2">
+                        <span className="text-base leading-none mt-0.5">ℹ️</span>
+                        <span>Enter your custom location details below and use the distance slider to set the delivery distance from our store.</span>
+                      </p>
+                    </motion.div>
+                    
+                    <motion.div custom={direction} variants={fieldItemVariants} className="space-y-1">
+                      <label
+                        htmlFor="chk-form-custom-area"
+                        className="text-xs font-bold text-slate-600 uppercase tracking-wide block"
+                      >
+                        Area / Location Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="chk-form-custom-area"
+                        type="text"
+                        placeholder="e.g. G-7, Peshawar Road, Wah Cantonment, Officers Colony"
+                        className="w-full text-xs p-2.5 bg-amber-50/40 border border-amber-300/50 rounded-xl outline-none font-medium text-slate-800 focus:border-[#3b4414] focus:bg-white focus:ring-2 focus:ring-[#3b4414]/10 transition-all"
+                      />
+                      <span className="text-[10px] text-slate-400 block">
+                        Enter the area or location name for accurate delivery.
+                      </span>
+                    </motion.div>
+                    
+                    <motion.div custom={direction} variants={fieldItemVariants} className="space-y-1.5 p-3.5 bg-amber-50/60 border border-amber-200/60 rounded-xl">
+                      <div className="flex justify-between text-xs font-semibold text-slate-700">
+                        <span>Distance from Store (High Court Rd, Gulrez):</span>
+                        <span className="text-[#3b4414] font-bold text-sm">{customDistanceKm} km</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="45"
+                        step="0.5"
+                        value={customDistanceKm}
+                        onChange={(e) => setCustomDistanceKm(parseFloat(e.target.value))}
+                        className="w-full accent-[#3b4414] cursor-pointer h-2 bg-slate-200 rounded-lg appearance-none"
+                      />
+                      <div className="flex justify-between text-[10px] text-slate-500 font-mono font-semibold">
+                        <span>1 km (Rs. 50)</span>
+                        <span>45 km (Rs. 2,250)</span>
+                      </div>
+                      <div className="mt-3 pt-3 border-t-2 border-amber-200/50">
+                        <div className="flex justify-between items-center bg-white/60 p-2 rounded-lg">
+                          <span className="text-xs font-bold text-amber-900">💳 Estimated Delivery Charge:</span>
+                          <span className="text-lg font-black text-amber-700">Rs. {Math.round(customDistanceKm * CHARGE_PER_KM).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </>
                 )}
+
+              {/* Area / Neighborhood */}
+              <motion.div custom={direction} variants={fieldItemVariants} className="space-y-1">
+                <label
+                  htmlFor="chk-form-neighborhood"
+                  className="text-xs font-bold text-slate-600 uppercase tracking-wide block"
+                >
+                  Area / Neighborhood <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="chk-form-neighborhood"
+                  type="text"
+                  value={checkoutFormData.neighborhood || ""}
+                  onChange={(e) => {
+                    setFieldErrors((prev) => ({ ...prev, neighborhood: "" }));
+                    setCheckoutFormData((prev) => ({ ...prev, neighborhood: e.target.value }));
+                  }}
+                  placeholder="e.g. Sector F-11/2, Gulrez, Bahria Phase 7"
+                  className={`w-full text-xs p-2.5 bg-slate-50 border rounded-xl outline-none font-medium text-slate-800 transition-all ${
+                    fieldErrors.neighborhood
+                      ? "border-red-400 focus:ring-2 focus:ring-red-200"
+                      : "border-slate-200 focus:border-[#3b4414] focus:bg-white focus:ring-2 focus:ring-[#3b4414]/10"
+                  }`}
+                />
+                {fieldErrors.neighborhood ? (
+                  <span className="text-[10.5px] text-red-500 font-medium block">
+                    {fieldErrors.neighborhood}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-slate-400 block">
+                    Enter the area or neighborhood clearly so delivery charges can be calculated precisely.
+                  </span>
+                )}
+              </motion.div>
 
               {/* Full Address */}
               <motion.div custom={direction} variants={fieldItemVariants} className="space-y-1">

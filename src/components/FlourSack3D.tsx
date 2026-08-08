@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
-import * as THREE from "three";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Volume2, VolumeX, Sparkles, RefreshCw, Play, Pause } from "lucide-react";
+import { Volume2, VolumeX, Sparkles } from "lucide-react";
 
 // ==========================================
 // 1. WEB AUDIO API CHAKKI SOUND SYNTHESIZER
@@ -161,85 +160,13 @@ class ChakkiSoundSynth {
 const chakkiAudio = new ChakkiSoundSynth();
 
 // ==========================================
-// 2. PROCEDURAL STONE TEXTURE DRAWER
-// ==========================================
-function drawStoneTexture(ctx: CanvasRenderingContext2D, size = 512, isTop = false) {
-  // Base basalt stone warm grey color
-  ctx.fillStyle = "#8a847e";
-  ctx.fillRect(0, 0, size, size);
-
-  // Granite stone speckle noise
-  for (let i = 0; i < 22000; i++) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-    const rand = Math.random();
-    if (rand < 0.4) {
-      ctx.fillStyle = "rgba(15, 23, 42, 0.15)"; // Dark slate grain
-    } else if (rand < 0.75) {
-      ctx.fillStyle = "rgba(254, 243, 199, 0.12)"; // Amber quartz speckle
-    } else {
-      ctx.fillStyle = "rgba(255, 255, 255, 0.18)"; // White crystal silica
-    }
-    const dotSize = Math.random() * 2 + 1;
-    ctx.fillRect(x, y, dotSize, dotSize);
-  }
-
-  // Draw concentric millstone carving furrows (traditional stone milling grooves)
-  ctx.strokeStyle = "rgba(41, 37, 36, 0.22)";
-  ctx.lineWidth = 4;
-  const center = size / 2;
-  
-  // Radial grinding lines (the furrows that route grains to the rim)
-  const lineCount = 36;
-  ctx.save();
-  ctx.translate(center, center);
-  for (let angle = 0; angle < 360; angle += 360 / lineCount) {
-    ctx.rotate((angle * Math.PI) / 180);
-    ctx.beginPath();
-    ctx.moveTo(35, 0);
-    // Beautiful curve furrow
-    ctx.quadraticCurveTo(120, 20, size / 2 - 10, 0);
-    ctx.stroke();
-  }
-  ctx.restore();
-
-  // Grinding face boundary circles
-  ctx.strokeStyle = "rgba(120, 113, 108, 0.35)";
-  ctx.lineWidth = 6;
-  for (let r = 50; r < size / 2; r += 45) {
-    ctx.beginPath();
-    ctx.arc(center, center, r, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  // Traditional wooden rim ring around the stone
-  ctx.strokeStyle = "#451a03"; // Rich mahogany wood
-  ctx.lineWidth = 14;
-  ctx.beginPath();
-  ctx.arc(center, center, size / 2 - 7, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // Decorative inner gold brass accent ring for premium craftsmanship
-  ctx.strokeStyle = "#f59e0b";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(center, center, 48, 0, Math.PI * 2);
-  ctx.stroke();
-}
-
-// ==========================================
-// 3. MAIN STONE CHAKKI MILL COMPONENT
+// MAIN STONE CHAKKI MILL COMPONENT
 // ==========================================
 export function FlourSack3D() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  
   // Interaction & Play states
   const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [grindSpeed, setGrindSpeed] = useState<"stop" | "slow" | "medium" | "fast">("medium");
   const [rotationAngle, setRotationAngle] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isFallback, setIsFallback] = useState(false);
   const [producedFlourCount, setProducedFlourCount] = useState(0);
 
   // Speed multiplier values
@@ -276,25 +203,8 @@ export function FlourSack3D() {
     }
   };
 
-  // Check fallback triggers (small screen, touch devices, sandbox frames lacking active WebGL context)
   useEffect(() => {
-    const evaluatePlatform = () => {
-      const isSmall = window.innerWidth < 768;
-      const isCoarse = window.matchMedia("(pointer: coarse)").matches;
-      let supportsWebGL = false;
-      try {
-        const c = document.createElement("canvas");
-        supportsWebGL = !!(window.WebGLRenderingContext && (c.getContext("webgl") || c.getContext("experimental-webgl")));
-      } catch (e) {}
-      
-      // Force 2D fallback under standard sandbox iframe context so interactions are guaranteed perfectly responsive
-      setIsFallback(isSmall || isCoarse || !supportsWebGL || true); 
-    };
-
-    evaluatePlatform();
-    window.addEventListener("resize", evaluatePlatform, { passive: true });
     return () => {
-      window.removeEventListener("resize", evaluatePlatform);
       chakkiAudio.stop(); // Safe clean-up
     };
   }, []);

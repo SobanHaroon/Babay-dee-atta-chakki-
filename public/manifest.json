@@ -12,22 +12,22 @@
   "categories": ["shopping", "food", "groceries"],
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "16x16 32x32 48x48",
-      "type": "image/x-icon",
-      "purpose": "any"
-    },
-    {
-      "src": "/logo.jpg",
+      "src": "/pwa-icon-192.png",
       "sizes": "192x192",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/logo.jpg",
+      "src": "/pwa-icon-512.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/jpeg",
+      "purpose": "any"
     }
   ],
   "shortcuts": [
@@ -36,14 +36,14 @@
       "short_name": "Shop",
       "description": "Browse stone-ground flour and organic grains",
       "url": "/?tab=shop",
-      "icons": [{ "src": "/logo.jpg", "sizes": "192x192" }]
+      "icons": [{ "src": "/pwa-icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Track Order",
       "short_name": "Track",
       "description": "Track your milling and express delivery",
       "url": "/?tab=tracker",
-      "icons": [{ "src": "/logo.jpg", "sizes": "192x192" }]
+      "icons": [{ "src": "/pwa-icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

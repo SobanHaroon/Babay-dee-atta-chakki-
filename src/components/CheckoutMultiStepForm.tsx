@@ -21,7 +21,8 @@ import {
   Building2,
   FileText
 } from "lucide-react";
-import { DELIVERY_LOCATIONS, CHARGE_PER_KM } from "../deliveryData";
+import { DeliveryArea, DeliveryCity } from "../types";
+import { DeliveryAreaSelector } from "./DeliveryAreaSelector";
 import { useToast } from "./ToastContainer";
 import { triggerHapticFeedback } from "../lib/utils";
 
@@ -29,6 +30,7 @@ interface CheckoutMultiStepFormProps {
   checkoutFormData: {
     name: string;
     phone: string;
+    email: string;
     address: string;
     area: string;
     neighborhood: string;
@@ -54,12 +56,16 @@ interface CheckoutMultiStepFormProps {
   >;
   checkoutError: string;
   setCheckoutError: (err: string) => void;
-  selectedArea: string;
-  setSelectedArea: (area: string) => void;
-  selectedSubLocation: string;
-  setSelectedSubLocation: (subLoc: string) => void;
-  customDistanceKm: number;
-  setCustomDistanceKm: (dist: number) => void;
+  deliveryCity: DeliveryCity | "";
+  deliveryAreaQuery: string;
+  deliveryAreas: DeliveryArea[];
+  selectedDeliveryArea: DeliveryArea | null;
+  deliveryAreasLoading: boolean;
+  deliveryAreasError: string;
+  onDeliveryCityChange: (city: DeliveryCity) => void;
+  onDeliveryAreaQueryChange: (query: string) => void;
+  onDeliveryAreaSelect: (area: DeliveryArea) => void;
+  onRetryDeliveryAreas: () => void;
   isDetectingLocation: boolean;
   handleDetectLocation: () => void;
   handleCheckoutSubmit: (e: React.FormEvent) => void;
@@ -80,12 +86,16 @@ export function CheckoutMultiStepForm({
   setCheckoutFormData,
   checkoutError,
   setCheckoutError,
-  selectedArea,
-  setSelectedArea,
-  selectedSubLocation,
-  setSelectedSubLocation,
-  customDistanceKm,
-  setCustomDistanceKm,
+  deliveryCity,
+  deliveryAreaQuery,
+  deliveryAreas,
+  selectedDeliveryArea,
+  deliveryAreasLoading,
+  deliveryAreasError,
+  onDeliveryCityChange,
+  onDeliveryAreaQueryChange,
+  onDeliveryAreaSelect,
+  onRetryDeliveryAreas,
   isDetectingLocation,
   handleDetectLocation,
   handleCheckoutSubmit,
@@ -114,25 +124,19 @@ export function CheckoutMultiStepForm({
         errors.phone = "Enter a valid local phone number (at least 10 digits).";
       }
     } else if (step === 2) {
-      if (!checkoutFormData.area) {
+      if (!deliveryCity) {
         errors.area = "Please select a delivery city.";
-      } else {
-        const cleanArea = checkoutFormData.area.toLowerCase().trim();
-        const isRawalpindi = cleanArea.includes("rawalpindi") || cleanArea === "pindi" || cleanArea.includes("rwp");
-        const isIslamabad = cleanArea.includes("islamabad") || cleanArea === "isb" || cleanArea.includes("islo");
-        if (!isRawalpindi && !isIslamabad) {
-          errors.area = "Delivery is currently available only in Rawalpindi and Islamabad.";
-        }
+      }
+      if (!selectedDeliveryArea) {
+        errors.neighborhood = "Please select a delivery area from the search results.";
+      } else if (!selectedDeliveryArea.available) {
+        errors.neighborhood = "Sorry, we currently do not deliver to this area.";
       }
 
       if (!checkoutFormData.address.trim()) {
-        errors.address = "Full home address is required.";
+        errors.address = "Complete delivery address is required.";
       } else if (checkoutFormData.address.trim().length < 5) {
         errors.address = "Please enter a detailed address (street, house #, sector).";
-      }
-
-      if (!checkoutFormData.neighborhood?.trim()) {
-        errors.neighborhood = "Please enter the area or neighborhood for delivery.";
       }
     }
 
@@ -451,6 +455,25 @@ export function CheckoutMultiStepForm({
                 )}
               </motion.div>
 
+              {/* Optional Email */}
+              <motion.div custom={direction} variants={fieldItemVariants} className="space-y-1">
+                <label htmlFor="chk-form-email" className="text-xs font-bold text-slate-600 uppercase tracking-wide block">
+                  Email Address <span className="text-slate-400 normal-case tracking-normal font-medium">(optional)</span>
+                </label>
+                <div className="relative">
+                  <FileText className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    id="chk-form-email"
+                    type="email"
+                    autoComplete="email"
+                    value={checkoutFormData.email}
+                    onChange={(event) => setCheckoutFormData((prev) => ({ ...prev, email: event.target.value }))}
+                    placeholder="you@example.com"
+                    className="w-full text-xs pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-slate-800 focus:border-[#3b4414] focus:bg-white focus:ring-2 focus:ring-[#3b4414]/10 transition-all"
+                  />
+                </div>
+              </motion.div>
+
               {/* Step 1 Informational Note */}
               <motion.div custom={direction} variants={fieldItemVariants} className="p-3 bg-blue-50/80 border border-blue-100 rounded-xl flex items-start gap-2.5 text-blue-900">
                 <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
@@ -505,175 +528,40 @@ export function CheckoutMultiStepForm({
                 </button>
               </motion.div>
 
-              {/* Delivery Area City Picker */}
-              <motion.div custom={direction} variants={fieldItemVariants} className="space-y-1">
-                <div className="flex items-center justify-between mb-1">
-                  <label
-                    htmlFor="chk-form-area"
-                    className="text-xs font-bold text-slate-600 uppercase tracking-wide block"
-                  >
-                    Delivery Area City <span className="text-red-500">*</span>
-                  </label>
+              {/* Database-backed city and searchable area selector */}
+              <motion.div custom={direction} variants={fieldItemVariants} className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[11px] text-slate-400">Choose the delivery zone used for your verified fee.</p>
                   <button
                     type="button"
                     onClick={handleDetectLocation}
                     disabled={isDetectingLocation}
-                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer disabled:opacity-50 shrink-0"
                   >
-                    {isDetectingLocation ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
-                        <span>Locating...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Navigation className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Detect GPS Location</span>
-                      </>
-                    )}
+                    {isDetectingLocation ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5" />}
+                    <span>{isDetectingLocation ? "Locating..." : "Detect GPS"}</span>
                   </button>
                 </div>
-
-                <select
-                  id="chk-form-area"
-                  value={checkoutFormData.area}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setCheckoutFormData((prev) => ({ ...prev, area: val }));
-                    setSelectedArea(val);
-                    if (val === "Rawalpindi") {
-                      setSelectedSubLocation("Gulrez Housing Scheme (Phase 1-5)");
-                      setCustomDistanceKm(1.5);
-                    } else if (val === "Islamabad") {
-                      setSelectedSubLocation("Sector I-8 / I-9");
-                      setCustomDistanceKm(12);
-                    }
+                <DeliveryAreaSelector
+                  city={deliveryCity}
+                  query={deliveryAreaQuery}
+                  areas={deliveryAreas}
+                  selectedArea={selectedDeliveryArea}
+                  loading={deliveryAreasLoading}
+                  error={deliveryAreasError}
+                  onCityChange={(city) => {
+                    setFieldErrors((previous) => ({ ...previous, area: "", neighborhood: "" }));
+                    onDeliveryCityChange(city);
                   }}
-                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 focus:border-[#3b4414] focus:bg-white rounded-xl outline-none cursor-pointer text-slate-800 font-medium h-10"
-                >
-                  <option value="Islamabad">Islamabad</option>
-                  <option value="Rawalpindi">Rawalpindi</option>
-                  <option value="Lahore">Lahore (No Delivery available)</option>
-                  <option value="Karachi">Karachi (No Delivery available)</option>
-                </select>
-              </motion.div>
-
-              {/* Sub-location Selector */}
-              {checkoutFormData.area &&
-                (checkoutFormData.area === "Islamabad" || checkoutFormData.area === "Rawalpindi") && (
-                  <motion.div custom={direction} variants={fieldItemVariants} className="space-y-1">
-                    <label
-                      htmlFor="chk-form-sublocation"
-                      className="text-xs font-bold text-slate-600 uppercase tracking-wide block"
-                    >
-                      Area / Sector (Rs. {CHARGE_PER_KM} / km from Store)
-                    </label>
-                    <select
-                      id="chk-form-sublocation"
-                      value={selectedSubLocation}
-                      onChange={(e) => setSelectedSubLocation(e.target.value)}
-                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 focus:border-[#3b4414] focus:bg-white rounded-xl outline-none cursor-pointer text-slate-800 font-medium h-10"
-                    >
-                      {DELIVERY_LOCATIONS.filter((l) => l.city === checkoutFormData.area).map((loc) => (
-                        <option key={loc.name} value={loc.name}>
-                          {loc.name} ({loc.distanceKm} km - Rs. {loc.distanceKm * CHARGE_PER_KM})
-                        </option>
-                      ))}
-                      <option value="Custom">Other / Custom Distance...</option>
-                    </select>
-                  </motion.div>
-                )}
-
-              {/* Custom Area / Distance Input */}
-              {checkoutFormData.area &&
-                (checkoutFormData.area === "Islamabad" || checkoutFormData.area === "Rawalpindi") &&
-                selectedSubLocation === "Custom" && (
-                  <>
-                    <motion.div custom={direction} variants={fieldItemVariants} className="space-y-1 p-3 bg-blue-50/80 border border-blue-100 rounded-xl">
-                      <p className="text-xs font-semibold text-blue-900 flex items-start gap-2">
-                        <span className="text-base leading-none mt-0.5">ℹ️</span>
-                        <span>Enter your custom location details below and use the distance slider to set the delivery distance from our store.</span>
-                      </p>
-                    </motion.div>
-                    
-                    <motion.div custom={direction} variants={fieldItemVariants} className="space-y-1">
-                      <label
-                        htmlFor="chk-form-custom-area"
-                        className="text-xs font-bold text-slate-600 uppercase tracking-wide block"
-                      >
-                        Area / Location Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        id="chk-form-custom-area"
-                        type="text"
-                        placeholder="e.g. G-7, Peshawar Road, Wah Cantonment, Officers Colony"
-                        className="w-full text-xs p-2.5 bg-amber-50/40 border border-amber-300/50 rounded-xl outline-none font-medium text-slate-800 focus:border-[#3b4414] focus:bg-white focus:ring-2 focus:ring-[#3b4414]/10 transition-all"
-                      />
-                      <span className="text-[10px] text-slate-400 block">
-                        Enter the area or location name for accurate delivery.
-                      </span>
-                    </motion.div>
-                    
-                    <motion.div custom={direction} variants={fieldItemVariants} className="space-y-1.5 p-3.5 bg-amber-50/60 border border-amber-200/60 rounded-xl">
-                      <div className="flex justify-between text-xs font-semibold text-slate-700">
-                        <span>Distance from Store (High Court Rd, Gulrez):</span>
-                        <span className="text-[#3b4414] font-bold text-sm">{customDistanceKm} km</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="1"
-                        max="45"
-                        step="0.5"
-                        value={customDistanceKm}
-                        onChange={(e) => setCustomDistanceKm(parseFloat(e.target.value))}
-                        className="w-full accent-[#3b4414] cursor-pointer h-2 bg-slate-200 rounded-lg appearance-none"
-                      />
-                      <div className="flex justify-between text-[10px] text-slate-500 font-mono font-semibold">
-                        <span>1 km (Rs. 50)</span>
-                        <span>45 km (Rs. 2,250)</span>
-                      </div>
-                      <div className="mt-3 pt-3 border-t-2 border-amber-200/50">
-                        <div className="flex justify-between items-center bg-white/60 p-2 rounded-lg">
-                          <span className="text-xs font-bold text-amber-900">💳 Estimated Delivery Charge:</span>
-                          <span className="text-lg font-black text-amber-700">Rs. {Math.round(customDistanceKm * CHARGE_PER_KM).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-
-              {/* Area / Neighborhood */}
-              <motion.div custom={direction} variants={fieldItemVariants} className="space-y-1">
-                <label
-                  htmlFor="chk-form-neighborhood"
-                  className="text-xs font-bold text-slate-600 uppercase tracking-wide block"
-                >
-                  Area / Neighborhood <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="chk-form-neighborhood"
-                  type="text"
-                  value={checkoutFormData.neighborhood || ""}
-                  onChange={(e) => {
-                    setFieldErrors((prev) => ({ ...prev, neighborhood: "" }));
-                    setCheckoutFormData((prev) => ({ ...prev, neighborhood: e.target.value }));
+                  onQueryChange={onDeliveryAreaQueryChange}
+                  onSelect={(area) => {
+                    setFieldErrors((previous) => ({ ...previous, area: "", neighborhood: "" }));
+                    onDeliveryAreaSelect(area);
                   }}
-                  placeholder="e.g. Sector F-11/2, Gulrez, Bahria Phase 7"
-                  className={`w-full text-xs p-2.5 bg-slate-50 border rounded-xl outline-none font-medium text-slate-800 transition-all ${
-                    fieldErrors.neighborhood
-                      ? "border-red-400 focus:ring-2 focus:ring-red-200"
-                      : "border-slate-200 focus:border-[#3b4414] focus:bg-white focus:ring-2 focus:ring-[#3b4414]/10"
-                  }`}
+                  onRetry={onRetryDeliveryAreas}
                 />
-                {fieldErrors.neighborhood ? (
-                  <span className="text-[10.5px] text-red-500 font-medium block">
-                    {fieldErrors.neighborhood}
-                  </span>
-                ) : (
-                  <span className="text-[10px] text-slate-400 block">
-                    Enter the area or neighborhood clearly so delivery charges can be calculated precisely.
-                  </span>
-                )}
+                {fieldErrors.area && <span className="text-[10.5px] text-red-500 font-medium block">{fieldErrors.area}</span>}
+                {fieldErrors.neighborhood && <span className="text-[10.5px] text-red-500 font-medium block">{fieldErrors.neighborhood}</span>}
               </motion.div>
 
               {/* Full Address */}
@@ -747,7 +635,7 @@ export function CheckoutMultiStepForm({
                 </div>
                 <div className="flex items-center justify-between border-t border-slate-200/60 pt-1">
                   <span className="text-slate-500 font-medium">Delivery Destination:</span>
-                  <span className="font-bold text-slate-800 truncate max-w-[200px]">{checkoutFormData.area} - {selectedSubLocation}</span>
+                  <span className="font-bold text-slate-800 truncate max-w-[200px]">{deliveryCity || "City not selected"} - {selectedDeliveryArea?.areaName || "Area not selected"}</span>
                 </div>
               </motion.div>
 

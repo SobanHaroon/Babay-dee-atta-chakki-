@@ -40,6 +40,32 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: "herbs", name: "Herbs & Special Items", desc: "100% natural psyllium husk, fennel, black seed, chia, and raw honey", icon: "Leaf" }
 ];
 
+export type DeliveryCity = "Rawalpindi" | "Islamabad";
+export type DeliveryDistanceSource = "baseline" | "exact_route";
+
+export interface DeliveryArea {
+  id: string;
+  city: DeliveryCity;
+  areaName: string;
+  category: string;
+  distanceKm: number;
+  deliveryRatePerKm: number;
+  deliveryCharge: number;
+  available: boolean;
+  pricingNote?: string;
+}
+
+export interface DeliverySnapshot {
+  areaId: string;
+  city: DeliveryCity;
+  areaName: string;
+  address: string;
+  distanceKm: number;
+  ratePerKm: number;
+  deliveryCharge: number;
+  distanceSource: DeliveryDistanceSource;
+}
+
 export interface Review {
   id: string;
   name: string;
@@ -64,9 +90,13 @@ export interface Order {
   customer: {
     name: string;
     phone: string;
+    email?: string;
     address: string;
+    city?: DeliveryCity;
     area: string;
+    areaId?: string;
   };
+  delivery?: DeliverySnapshot;
   items: CartItem[];
   paymentMethod: string;
   subtotal: number;

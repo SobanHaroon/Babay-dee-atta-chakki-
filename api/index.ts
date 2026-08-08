@@ -1,6 +1,8 @@
 import "dotenv/config";
 import express from "express";
 import { createClient } from "@supabase/supabase-js";
+import { calculateDeliveryCharge } from "../src/lib/deliveryCalculation.js";
+import { findDeliveryArea, isDeliveryCity, searchDeliveryAreas } from "./delivery.js";
 
 const app = express();
 app.use(express.json());
@@ -345,6 +347,25 @@ app.get("/api/product/:id", async (req, res) => {
   }
 });
 
+app.get("/api/delivery-areas", async (req, res) => {
+  const city = String(req.query.city || "").trim();
+  const query = String(req.query.query || "").trim().slice(0, 80);
+  const parsedLimit = Number(req.query.limit || 40);
+  const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(Math.floor(parsedLimit), 1), 50) : 40;
+
+  if (!isDeliveryCity(city)) {
+    return res.status(400).json({ error: "Please choose Rawalpindi or Islamabad." });
+  }
+
+  try {
+    const areas = await searchDeliveryAreas(dbClient, city, query, limit);
+    return res.json({ areas, city, query });
+  } catch (error) {
+    console.error("Delivery area lookup failed:", error);
+    return res.status(503).json({ error: "Delivery areas are temporarily unavailable. Please try again." });
+  }
+});
+
 app.post("/api/cart", (req, res) => {
   const { items } = req.body;
   if (!items || !Array.isArray(items)) {
@@ -424,129 +445,149 @@ app.post("/api/order/feedback", (req, res) => {
 
 app.post("/api/checkout", async (req, res) => {
   try {
-    const { name, phone, address, neighborhood, city, area, cartItems, paymentMethod, deliveryDate, deliverySlot } = req.body;
+    const name = String(req.body.name || "").trim();
+    const phone = String(req.body.phone || "").trim();
+    const email = String(req.body.email || "").trim();
+    const address = String(req.body.address || "").trim();
+    const city = String(req.body.city || "").trim();
+    const areaId = String(req.body.areaId || "").trim();
+    const paymentMethod = String(req.body.paymentMethod || "Cash on Delivery").trim();
+    const deliveryDate = req.body.deliveryDate || undefined;
+    const deliverySlot = req.body.deliverySlot || undefined;
 
     if (!name || !phone || !address) {
       return res.status(400).json({ error: "Customer name, contact phone, and complete address are required." });
     }
+    if (!isDeliveryCity(city)) {
+      return res.status(400).json({ error: "Please select a valid delivery city." });
+    }
+    if (!areaId) {
+      return res.status(400).json({ error: "Please select a delivery area from the search results." });
+    }
+    if (address.length < 5) {
+      return res.status(400).json({ error: "Please enter a complete home address with house and street details." });
+    }
 
-    const validCartItems = Array.isArray(cartItems) && cartItems.length > 0 ? cartItems : [];
+    const validCartItems = Array.isArray(req.body.cartItems) && req.body.cartItems.length > 0 ? req.body.cartItems : [];
     if (validCartItems.length === 0) {
       return res.status(400).json({ error: "Your basket is empty. Please add items to your basket before placing an order." });
     }
 
-    const rawArea = String(area || city || "Rawalpindi").trim();
-    const cleanArea = rawArea.toLowerCase();
-    const isIslamabad = cleanArea.includes("islamabad") || cleanArea === "isb" || cleanArea.includes("islo");
-    const validatedArea = isIslamabad ? "Islamabad" : (rawArea || "Rawalpindi");
-    const cleanNeighborhood = String(neighborhood || "").trim();
-    const fullAddress = [String(address || "").trim(), cleanNeighborhood, validatedArea].filter(Boolean).join(", ");
+    const deliveryArea = await findDeliveryArea(dbClient, city, areaId);
+    if (!deliveryArea) {
+      return res.status(404).json({ error: "The selected delivery area could not be found. Please search and select it again." });
+    }
+    if (!deliveryArea.available) {
+      return res.status(422).json({ error: "Sorry, we currently do not deliver to this area." });
+    }
+    if (!Number.isFinite(deliveryArea.distanceKm) || deliveryArea.distanceKm < 0) {
+      return res.status(422).json({ error: "This delivery area has an invalid distance configuration." });
+    }
+    if (!Number.isFinite(deliveryArea.deliveryRatePerKm) || deliveryArea.deliveryRatePerKm < 0) {
+      return res.status(422).json({ error: "This delivery area has an invalid delivery-rate configuration." });
+    }
 
     const subtotal = validCartItems.reduce((acc: number, item: any) => {
-      const price = typeof item.price === "number" ? item.price : parseFloat(item.price) || 0;
-      const qty = typeof item.quantity === "number" ? item.quantity : parseInt(item.quantity) || 1;
-      return acc + (price * qty);
+      const price = typeof item.price === "number" ? item.price : parseFloat(String(item.price).replace(/,/g, "")) || 0;
+      const quantity = typeof item.quantity === "number" ? item.quantity : parseInt(String(item.quantity), 10) || 0;
+      if (!Number.isFinite(price) || price < 0 || !Number.isFinite(quantity) || quantity <= 0) return acc;
+      return acc + price * quantity;
     }, 0);
-    
-    const distanceKm = typeof req.body.distanceKm === "number" && !isNaN(req.body.distanceKm) && req.body.distanceKm > 0 
-      ? req.body.distanceKm 
-      : (validatedArea === "Islamabad" ? 12 : 6);
-    const rawDeliveryCharges = Math.round(distanceKm * 50);
-    const deliveryCharges = subtotal >= 3000 ? 0 : rawDeliveryCharges;
+
+    // Only a validated routing adapter may replace the area baseline in the future.
+    // Client-provided distance/rate/fee fields are deliberately ignored.
+    const distanceKm = deliveryArea.distanceKm;
+    const deliveryCharges = calculateDeliveryCharge(distanceKm, deliveryArea.deliveryRatePerKm);
     const discount = 0;
     const total = subtotal + deliveryCharges;
-
     const numericId = Math.floor(100000 + Math.random() * 900000);
     const orderId = "BDEC-" + numericId;
+    const createdAt = new Date().toISOString();
+    const delivery = {
+      areaId: deliveryArea.id,
+      city: deliveryArea.city,
+      areaName: deliveryArea.areaName,
+      address,
+      distanceKm,
+      ratePerKm: deliveryArea.deliveryRatePerKm,
+      deliveryCharge: deliveryCharges,
+      distanceSource: "baseline" as const,
+    };
+    const statusHistory = [
+      { status: "Order Placed", time: new Date().toLocaleTimeString(), detail: "Order successfully received at Babay Dee central system" }
+    ];
     const newOrder = {
       id: orderId,
-      customer: { name, phone, address: fullAddress, area: validatedArea, neighborhood: cleanNeighborhood },
+      customer: { name, phone, email: email || undefined, address, city: deliveryArea.city, area: deliveryArea.areaName, areaId: deliveryArea.id },
+      delivery,
       items: validCartItems,
-      paymentMethod: paymentMethod || "Cash on Delivery",
+      paymentMethod,
       subtotal,
       deliveryCharges,
       discount,
       total,
-      deliveryDate: deliveryDate || undefined,
-      deliverySlot: deliverySlot || undefined,
+      deliveryDate,
+      deliverySlot,
       status: "Order Placed",
-      statusHistory: [
-        { status: "Order Placed", time: new Date().toLocaleTimeString(), detail: "Order successfully received at Babay Dee central system" }
-      ],
-      createdAt: new Date().toISOString()
+      statusHistory,
+      createdAt,
     };
 
-    ACTIVE_ORDERS.push(newOrder);
+    const serializedMetadata = {
+      address,
+      city: deliveryArea.city,
+      area: deliveryArea.areaName,
+      areaId: deliveryArea.id,
+      email: email || undefined,
+      delivery,
+      paymentMethod,
+      subtotal,
+      deliveryCharges,
+      discount,
+      total,
+      deliveryDate,
+      deliverySlot,
+      status: "Order Placed",
+      statusHistory,
+      items: validCartItems.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        unit: item.unit,
+      })),
+    };
+    const customerAddressValue = `${address} | METADATA:${JSON.stringify(serializedMetadata)}`;
+    const now = new Date(createdAt);
+    const insertPayload = {
+      id: Math.floor(Date.now() / 1000) + Math.floor(Math.random() * 1000),
+      created_at: createdAt,
+      "order id": numericId,
+      "customer name": name,
+      "contact number": phone,
+      "customer address": customerAddressValue,
+      date: now.toISOString().split("T")[0],
+      time: now.toTimeString().split(" ")[0],
+      Price: total,
+    };
 
-    // Save order data dynamically to the connected Supabase orders database if available
-    if (dbClient) {
-      try {
-        const serializedMetadata = {
-          address: fullAddress,
-          area: validatedArea,
-          neighborhood: cleanNeighborhood,
-          paymentMethod: paymentMethod || "Cash on Delivery",
-          subtotal,
-          deliveryCharges,
-          discount,
-          total,
-          deliveryDate: newOrder.deliveryDate,
-          deliverySlot: newOrder.deliverySlot,
-          status: "Order Placed",
-          statusHistory: newOrder.statusHistory,
-          items: validCartItems.map((item: any) => ({
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity
-          }))
-        };
-        const customerAddressValue = `${fullAddress} | METADATA:${JSON.stringify(serializedMetadata)}`;
-        
-        const now = new Date();
-        const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
-        const timeStr = now.toTimeString().split(" ")[0]; // HH:MM:SS
-
-        const insertPayload = {
-          id: Math.floor(Date.now() / 1000) + Math.floor(Math.random() * 1000),
-          created_at: now.toISOString(),
-          "order id": numericId,
-          "customer name": name,
-          "contact number": phone,
-          "customer address": customerAddressValue,
-          date: dateStr,
-          time: timeStr,
-          Price: total
-        };
-
-        const { error } = await dbClient.from("orders").insert([insertPayload]);
-        if (error) {
-          console.error("Error inserting order to Supabase:", error);
-        } else {
-          console.log(`Successfully wrote order BDEC-${numericId} to Supabase!`);
-        }
-      } catch (err) {
-        console.error("Exception writing order to Supabase:", err);
-      }
+    const { error: orderInsertError } = await dbClient.from("orders").insert([insertPayload]);
+    if (orderInsertError) {
+      console.error("Error inserting validated order to Supabase:", orderInsertError);
+      return res.status(503).json({ error: "We could not save your order securely. Please try again." });
     }
 
-    // Await order notification dispatch
+    ACTIVE_ORDERS.push(newOrder);
     try {
       await triggerOrderNotification(newOrder);
-    } catch (ntfyErr) {
-      console.error("Notification dispatch error in checkout handler:", ntfyErr);
+    } catch (notificationError) {
+      console.error("Notification dispatch error in checkout handler:", notificationError);
     }
 
-    return res.json({
-      success: true,
-      orderId: orderId,
-      order: newOrder
-    });
+    return res.json({ success: true, orderId, order: newOrder });
   } catch (globalCheckoutErr: any) {
     console.error("Global checkout handler exception:", globalCheckoutErr);
-    return res.status(500).json({
-      error: "Internal checkout system exception."
-    });
+    return res.status(500).json({ error: "Internal checkout system exception." });
   }
 });
 
@@ -668,9 +709,13 @@ app.get("/api/order/:id", async (req, res) => {
           customer: {
             name: row["customer name"] || "Valued Customer",
             phone: row["contact number"] || "",
-            address: customAddress,
-            area: metadata?.area || "Islamabad"
+            email: metadata?.email,
+            address: metadata?.delivery?.address || metadata?.address || customAddress,
+            city: metadata?.delivery?.city || metadata?.city,
+            area: metadata?.delivery?.areaName || metadata?.area || "Islamabad",
+            areaId: metadata?.delivery?.areaId || metadata?.areaId,
           },
+          delivery: metadata?.delivery,
           items: metadata?.items || [{ name: "Chakki Atta (Kg)", price: 170, quantity: 10 }],
           paymentMethod: metadata?.paymentMethod || "Cash on Delivery",
           subtotal: metadata?.subtotal || 0,

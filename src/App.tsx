@@ -33,9 +33,11 @@ import {
   TrendingUp,
   Zap
 } from "lucide-react";
-import { Product, Category, Review, CartItem, Order, DEFAULT_CATEGORIES } from "./types";
+import { Product, Category, Review, CartItem, Order, DeliveryArea, DeliveryCity, DEFAULT_CATEGORIES } from "./types";
 import { loadStoredReviews, saveStoredReviews, mergeStoredWithApiReviews } from "./data/reviewStorage";
-import { DELIVERY_LOCATIONS, calculateDeliveryCharge, CHARGE_PER_KM } from "./deliveryData";
+import { DELIVERY_LOCATIONS } from "./deliveryData";
+import { calculateDeliveryCharge, formatRs } from "./lib/deliveryCalculation";
+import { searchDeliveryAreas } from "./lib/deliveryService";
 import { ProductCard } from "./components/ProductCard";
 import { FallingGrains } from "./components/FallingGrains";
 import { ProductDetailsModal } from "./components/ProductDetailsModal";
@@ -45,18 +47,19 @@ import { MobileBottomNav } from "./components/MobileBottomNav";
 import { OrderSuccessView } from "./components/OrderSuccessView";
 import { SkeletonProductCard } from "./components/Skeleton";
 import { SearchBar } from "./components/SearchBar";
+import { DeliveryChargeSummary } from "./components/DeliveryChargeSummary";
 import { SkeletonLoaderScreen } from "./components/SkeletonLoaderScreen";
 import { FlipText, AnimatedNumber, AnimatedScore, AnimeScrollReveal } from "./components/AnimatedComponents";
 import { GsapMagnetic, GsapScrollReveal, GsapTopProgressBar, GsapCounter } from "./components/GsapAnimations";
 import { Logo } from "./components/Logo";
 import { generateProductJsonLd, generateBreadcrumbJsonLd, injectJsonLdScript, removeJsonLdScript } from "./lib/jsonLd";
 import { fetchProductsFromSupabaseDirectly } from "./lib/supabaseProducts";
-import { insertOrderToSupabase, sendNtfyNotification } from "./lib/orderHelper";
 import { supabase } from "./lib/supabaseClient";
 import { motion, AnimatePresence } from "motion/react";
 import { animate } from "animejs";
 import { useToast } from "./components/ToastContainer";
 import { triggerHapticFeedback } from "./lib/utils";
+import { SITE_DESCRIPTION, SITE_NAME } from "./lib/siteMetadata";
 
 // Lazy-loaded heavy components for optimal mobile Lighthouse performance
 const FlourSack3D = React.lazy(() => import("./components/FlourSack3D").then(m => ({ default: m.FlourSack3D })));
@@ -343,10 +346,17 @@ export default function App() {
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [pulseBasket, setPulseBasket] = useState(false);
-  const [selectedArea, setSelectedArea] = useState("Islamabad"); // default delivery town, Rawalpindi alternative
+  const [selectedArea, setSelectedArea] = useState("Islamabad"); // legacy cart-drawer city state
   const [selectedSubLocation, setSelectedSubLocation] = useState<string>("Sector I-8 / I-9");
   const [customDistanceKm, setCustomDistanceKm] = useState<number>(12);
-  
+  const [deliveryCity, setDeliveryCity] = useState<DeliveryCity | "">("Islamabad");
+  const [deliveryAreaQuery, setDeliveryAreaQuery] = useState("");
+  const [deliveryAreas, setDeliveryAreas] = useState<DeliveryArea[]>([]);
+  const [selectedDeliveryArea, setSelectedDeliveryArea] = useState<DeliveryArea | null>(null);
+  const [deliveryAreasLoading, setDeliveryAreasLoading] = useState(false);
+  const [deliveryAreasError, setDeliveryAreasError] = useState("");
+  const [deliveryAreasRequestKey, setDeliveryAreasRequestKey] = useState(0);
+
   // Modals / Overlays
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
@@ -357,6 +367,7 @@ export default function App() {
   const [checkoutFormData, setCheckoutFormData] = useState({
     name: "",
     phone: "",
+    email: "",
     address: "",
     area: "Islamabad",
     neighborhood: "",
@@ -369,6 +380,51 @@ export default function App() {
   const [checkoutError, setCheckoutError] = useState("");
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+
+  useEffect(() => {
+    if ((!checkoutActive && !isCartOpen) || !deliveryCity) {
+      setDeliveryAreas([]);
+      setDeliveryAreasError("");
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setDeliveryAreasLoading(true);
+      setDeliveryAreasError("");
+      try {
+        const areas = await searchDeliveryAreas(deliveryCity, deliveryAreaQuery, controller.signal);
+        setDeliveryAreas(areas);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setDeliveryAreasError(error instanceof Error ? error.message : "Unable to load delivery areas.");
+        setDeliveryAreas([]);
+      } finally {
+        if (!controller.signal.aborted) setDeliveryAreasLoading(false);
+      }
+    }, 220);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [checkoutActive, isCartOpen, deliveryCity, deliveryAreaQuery, deliveryAreasRequestKey]);
+
+  const handleDeliveryCityChange = (city: DeliveryCity) => {
+    setDeliveryCity(city);
+    setSelectedArea(city);
+    setSelectedDeliveryArea(null);
+    setDeliveryAreaQuery("");
+    setCheckoutFormData((prev) => ({ ...prev, area: city, neighborhood: "" }));
+  };
+
+  const handleDeliveryAreaSelect = (area: DeliveryArea) => {
+    setSelectedDeliveryArea(area);
+    setDeliveryCity(area.city);
+    setSelectedArea(area.city);
+    setDeliveryAreaQuery(area.areaName);
+    setCheckoutFormData((prev) => ({ ...prev, area: area.city, neighborhood: area.areaName }));
+  };
 
   const handleDetectLocation = () => {
     if (!navigator.geolocation) {
@@ -439,38 +495,22 @@ export default function App() {
           console.warn("Reverse geocoding network call skipped:", e);
         }
 
-        // Update delivery area city state
-        setSelectedArea(detectedCity);
+        // GPS can suggest a city/search term, but it never bypasses the database area selection.
+        const detectedDeliveryCity = detectedCity as DeliveryCity;
+        setDeliveryCity(detectedDeliveryCity);
+        setSelectedArea(detectedDeliveryCity);
+        setSelectedDeliveryArea(null);
+        setDeliveryAreaQuery(detectedStreet);
         setCheckoutFormData((prev) => {
-          let newAddress = prev.address;
-          if (detectedStreet && (!prev.address || prev.address.trim() === "")) {
-            newAddress = `${detectedStreet}, ${detectedCity}`;
-          }
-          return {
-            ...prev,
-            area: detectedCity,
-            address: newAddress,
-          };
+          const newAddress = detectedStreet && (!prev.address || prev.address.trim() === "")
+            ? `${detectedStreet}, ${detectedCity}`
+            : prev.address;
+          return { ...prev, area: detectedCity, neighborhood: "", address: newAddress };
         });
 
-        // Find closest sublocation in delivery data
         const cityLocations = DELIVERY_LOCATIONS.filter((l) => l.city === detectedCity);
-        let closestLoc = cityLocations[0];
-        let minDiff = 999;
-        cityLocations.forEach((loc) => {
-          const diff = Math.abs(loc.distanceKm - distKm);
-          if (diff < minDiff) {
-            minDiff = diff;
-            closestLoc = loc;
-          }
-        });
-
-        if (closestLoc && minDiff < 4) {
-          setSelectedSubLocation(closestLoc.name);
-        } else {
-          setSelectedSubLocation("Custom");
-          setCustomDistanceKm(Math.max(1, Math.min(45, distKm)));
-        }
+        const closestLoc = cityLocations.sort((a, b) => Math.abs(a.distanceKm - distKm) - Math.abs(b.distanceKm - distKm))[0];
+        if (closestLoc) setSelectedSubLocation(closestLoc.name);
 
         setIsDetectingLocation(false);
         toast.success(
@@ -803,6 +843,11 @@ export default function App() {
       setSelectedProduct(null);
     }
 
+    const searchParam = params.get("q");
+    if (searchParam !== null) {
+      setSearchQuery(searchParam);
+    }
+
     // Parse product parameter for detail view modal
     const productParam = params.get("product");
     if (productParam && products.length > 0) {
@@ -820,6 +865,7 @@ export default function App() {
     if (selectedProduct) {
       params.set("product", selectedProduct.id);
       params.delete("tab");
+      params.delete("q");
     } else {
       params.delete("product");
       if (activeTab && activeTab !== "home") {
@@ -827,17 +873,25 @@ export default function App() {
       } else {
         params.delete("tab");
       }
+      if (searchQuery.trim()) {
+        params.set("q", searchQuery.trim());
+      } else {
+        params.delete("q");
+      }
     }
-    
+
     const queryString = params.toString();
     const newUrl = `${window.location.pathname}${queryString ? `?${queryString}` : ""}`;
     window.history.replaceState(null, "", newUrl);
-  }, [activeTab, selectedProduct]);
+  }, [activeTab, selectedProduct, searchQuery]);
 
-  // Dynamically change the document title based on the active Tab or Selected Product
+  // Keep title and description consistent as the SPA changes views.
   useEffect(() => {
+    const descriptionMeta = document.querySelector('meta[name="description"]');
+    if (descriptionMeta) descriptionMeta.setAttribute("content", SITE_DESCRIPTION);
+
     if (selectedProduct) {
-      document.title = `Babay Dee | ${selectedProduct.name} - Premium Quality`;
+      document.title = `${SITE_NAME} | ${selectedProduct.name} - Premium Quality`;
       return;
     }
 
@@ -965,14 +1019,25 @@ export default function App() {
     e.preventDefault();
     setCheckoutError("");
 
-    const { name, phone, address, area, neighborhood } = checkoutFormData;
-    if (!name.trim() || !phone.trim() || !address.trim() || !neighborhood.trim()) {
-      const errMsg = "Please fill in all customer inputs (Name, Phone, Area/Neighborhood, and Full Address).";
+    const { name, phone, address, email } = checkoutFormData;
+    if (!name.trim() || !phone.trim() || !address.trim()) {
+      const errMsg = "Please fill in your name, phone number, complete address, and delivery area.";
       setCheckoutError(errMsg);
       toast.error(errMsg);
       return;
     }
-
+    if (!deliveryCity || !selectedDeliveryArea) {
+      const errMsg = "Please select a delivery city and searchable delivery area.";
+      setCheckoutError(errMsg);
+      toast.error(errMsg);
+      return;
+    }
+    if (!selectedDeliveryArea.available) {
+      const errMsg = "Sorry, we currently do not deliver to this area.";
+      setCheckoutError(errMsg);
+      toast.error(errMsg);
+      return;
+    }
     if (!cartItems || cartItems.length === 0) {
       const errMsg = "Your basket is empty. Please add items before placing an order.";
       setCheckoutError(errMsg);
@@ -980,26 +1045,25 @@ export default function App() {
       return;
     }
 
-    // Show pre-checkout summary confirmation modal
+    // Email is optional, but when supplied it is passed through for order contact details.
+    void email;
     setShowPreCheckoutModal(true);
   };
 
-  // Final confirmation checkout handler
+  // Final confirmation checkout handler. The API re-reads the area and calculates the fee.
   const handleFinalOrderSubmit = async () => {
     triggerHapticFeedback([40, 60, 50]);
     setIsPlacingOrder(true);
     setCheckoutError("");
 
-    const { name, phone, address, area, neighborhood } = checkoutFormData;
-    const cleanArea = (area || "Rawalpindi").toLowerCase().trim();
-    const isIslamabad = cleanArea.includes("islamabad") || cleanArea === "isb" || cleanArea.includes("islo");
-    const validatedArea = isIslamabad ? "Islamabad" : (area || "Rawalpindi");
+    const { name, phone, address, email } = checkoutFormData;
     const finalPaymentMethod = "Cash on Delivery";
-    const cleanNeighborhood = neighborhood?.trim() || "";
-    const fullAddress = [address.trim(), cleanNeighborhood, validatedArea].filter(Boolean).join(", ");
 
-    const subLocObj = DELIVERY_LOCATIONS.find(l => l.city === validatedArea && l.name === selectedSubLocation);
-    const dist = selectedSubLocation === "Custom" ? customDistanceKm : (subLocObj ? subLocObj.distanceKm : 6);
+    if (!deliveryCity || !selectedDeliveryArea) {
+      setCheckoutError("Please select a valid delivery area before placing your order.");
+      setIsPlacingOrder(false);
+      return;
+    }
 
     try {
       const res = await fetch("/api/checkout", {
@@ -1008,70 +1072,35 @@ export default function App() {
         body: JSON.stringify({
           name: name.trim(),
           phone: phone.trim(),
+          email: email.trim(),
           address: address.trim(),
-          neighborhood: cleanNeighborhood,
-          city: validatedArea,
-          area: validatedArea,
+          city: deliveryCity,
+          areaId: selectedDeliveryArea.id,
           cartItems,
           paymentMethod: finalPaymentMethod,
-          distanceKm: dist,
-          subLocation: selectedSubLocation,
           deliveryDate: checkoutFormData.deliveryDate,
-          deliverySlot: checkoutFormData.deliverySlot
-        })
+          deliverySlot: checkoutFormData.deliverySlot,
+        }),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
         setCreatedOrder(data.order);
-        setCartItems([]); // flush cart
+        setCartItems([]);
         setCheckoutActive(false);
         setShowPreCheckoutModal(false);
         toast.success("Order placed successfully! Milling will begin shortly.");
-        if (typeof window !== "undefined") {
-          localStorage.setItem("last_tracking_id", data.orderId || data.order?.id);
-        }
+        if (typeof window !== "undefined") localStorage.setItem("last_tracking_id", data.orderId || data.order?.id);
       } else {
         const errMsg = data.error || "Failed to process checkout transaction. Try again.";
         setCheckoutError(errMsg);
         toast.error(errMsg);
       }
-    } catch (err) {
-      console.error("Checkout submission error fallback:", err);
-      // Fail-safe client side order creation so customer orders process 100% reliably
-      const numericId = Math.floor(100000 + Math.random() * 900000);
-      const fallbackOrderId = "BDEC-" + numericId;
-      const subtotal = cartItems.reduce((acc, it) => acc + (it.price * it.quantity), 0);
-      const deliveryCharges = subtotal >= 3000 ? 0 : Math.round(dist * 50);
-      const fallbackOrder = {
-        id: fallbackOrderId,
-        customer: { name: name.trim(), phone: phone.trim(), address: fullAddress, area: validatedArea, neighborhood: cleanNeighborhood },
-        items: [...cartItems],
-        paymentMethod: finalPaymentMethod,
-        subtotal,
-        deliveryCharges,
-        discount: 0,
-        total: subtotal + deliveryCharges,
-        deliveryDate: checkoutFormData.deliveryDate,
-        status: "Order Placed",
-        statusHistory: [
-          { status: "Order Placed", time: new Date().toLocaleTimeString(), detail: "Order successfully received at Babay Dee central system" }
-        ],
-        createdAt: new Date().toISOString()
-      };
-
-      // Direct client-side insert to Supabase & push to Ntfy
-      await insertOrderToSupabase(fallbackOrder);
-      await sendNtfyNotification(fallbackOrder);
-
-      setCreatedOrder(fallbackOrder);
-      setCartItems([]);
-      setCheckoutActive(false);
-      setShowPreCheckoutModal(false);
-      toast.success("Order placed successfully! Milling will begin shortly.");
-      if (typeof window !== "undefined") {
-        localStorage.setItem("last_tracking_id", fallbackOrderId);
-      }
+    } catch (error) {
+      console.error("Checkout submission error:", error);
+      const errMsg = "Network error while securely saving your order. No order was created; please try again.";
+      setCheckoutError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsPlacingOrder(false);
     }
@@ -1394,7 +1423,7 @@ export default function App() {
               exit="exit"
               className="space-y-16"
             >
-            {/* HERO SECTION WITH THREEJS BACKGROUND AND SACK */}
+            {/* Hero section with the CSS slideshow and interactive mill visual */}
             <section className="relative w-full h-[620px] max-md:h-auto max-md:py-16 bg-slate-950 overflow-hidden flex items-center">
               
               {/* Slideshow background (Full-bleed hardware-accelerated CSS transition) */}
@@ -1956,12 +1985,22 @@ export default function App() {
                     setCheckoutFormData={setCheckoutFormData}
                     checkoutError={checkoutError}
                     setCheckoutError={setCheckoutError}
-                    selectedArea={selectedArea}
-                    setSelectedArea={setSelectedArea}
-                    selectedSubLocation={selectedSubLocation}
-                    setSelectedSubLocation={setSelectedSubLocation}
-                    customDistanceKm={customDistanceKm}
-                    setCustomDistanceKm={setCustomDistanceKm}
+                    deliveryCity={deliveryCity}
+                    deliveryAreaQuery={deliveryAreaQuery}
+                    deliveryAreas={deliveryAreas}
+                    selectedDeliveryArea={selectedDeliveryArea}
+                    deliveryAreasLoading={deliveryAreasLoading}
+                    deliveryAreasError={deliveryAreasError}
+                    onDeliveryCityChange={handleDeliveryCityChange}
+                    onDeliveryAreaQueryChange={(query) => {
+                      setDeliveryAreaQuery(query);
+                      if (selectedDeliveryArea && query !== selectedDeliveryArea.areaName) {
+                        setSelectedDeliveryArea(null);
+                        setCheckoutFormData((prev) => ({ ...prev, neighborhood: "" }));
+                      }
+                    }}
+                    onDeliveryAreaSelect={handleDeliveryAreaSelect}
+                    onRetryDeliveryAreas={() => setDeliveryAreasRequestKey((key) => key + 1)}
                     isDetectingLocation={isDetectingLocation}
                     handleDetectLocation={handleDetectLocation}
                     handleCheckoutSubmit={handleCheckoutSubmit}
@@ -1978,6 +2017,10 @@ export default function App() {
                 <h4 className="font-bold text-slate-800 border-b border-slate-200 pb-2">
                   Basket Ledger summary
                 </h4>
+                <DeliveryChargeSummary
+                  area={selectedDeliveryArea}
+                  subtotal={cartItems.reduce((acc, it) => acc + (it.price * it.quantity), 0)}
+                />
                 
                 {/* List of items */}
                 <div className="space-y-3.5 max-h-56 overflow-y-auto pr-1">
@@ -1989,38 +2032,30 @@ export default function App() {
                   ))}
                 </div>
 
-                {/* Ledger items */}
+                {/* Verified delivery ledger */}
                 <div className="border-t border-slate-200/60 pt-3 space-y-1.5 font-medium text-slate-550">
                   <div className="flex justify-between">
                     <span>Sourced Subtotal</span>
                     <span className="font-mono font-bold text-slate-800">
-                      Rs. {cartItems.reduce((acc, it) => acc + (it.price * it.quantity), 0)}
+                      {formatRs(cartItems.reduce((acc, it) => acc + (it.price * it.quantity), 0))}
                     </span>
                   </div>
                   <div className="flex justify-between text-slate-500">
                     <span className="flex flex-col">
                       <span>Express Delivery Charges</span>
                       <span className="text-[10px] text-slate-400 font-sans">
-                        Distance: {selectedSubLocation === "Custom" ? customDistanceKm : (DELIVERY_LOCATIONS.find(l => l.city === checkoutFormData.area && l.name === selectedSubLocation)?.distanceKm || 0)} km (@ Rs. 50/km)
+                        {selectedDeliveryArea ? `Distance: ${selectedDeliveryArea.distanceKm} km (@ Rs. ${selectedDeliveryArea.deliveryRatePerKm}/km)` : "Select a delivery area to calculate"}
                       </span>
                     </span>
                     <span className="font-mono font-bold text-slate-800">
-                      Rs. {calculateDeliveryCharge(selectedSubLocation === "Custom" ? customDistanceKm : (DELIVERY_LOCATIONS.find(l => l.city === checkoutFormData.area && l.name === selectedSubLocation)?.distanceKm || 0))}
+                      {selectedDeliveryArea ? formatRs(calculateDeliveryCharge(selectedDeliveryArea.distanceKm, selectedDeliveryArea.deliveryRatePerKm)) : "—"}
                     </span>
                   </div>
 
-                  {/* Total row block */}
                   <div className="flex justify-between text-sm font-black text-slate-850 pt-2 border-t border-dashed border-slate-200">
                     <span>Grand Ledger Total</span>
                     <span className="text-blue-600 font-mono">
-                      Rs. {
-                        (() => {
-                          const sub = cartItems.reduce((acc, it) => acc + (it.price * it.quantity), 0);
-                          const dist = selectedSubLocation === "Custom" ? customDistanceKm : (DELIVERY_LOCATIONS.find(l => l.city === checkoutFormData.area && l.name === selectedSubLocation)?.distanceKm || 0);
-                          const del = calculateDeliveryCharge(dist);
-                          return sub + del;
-                        })()
-                      }
+                      {formatRs(cartItems.reduce((acc, it) => acc + (it.price * it.quantity), 0) + (selectedDeliveryArea ? calculateDeliveryCharge(selectedDeliveryArea.distanceKm, selectedDeliveryArea.deliveryRatePerKm) : 0))}
                     </span>
                   </div>
                 </div>
@@ -2049,6 +2084,22 @@ export default function App() {
         onSubLocationChange={(subLoc) => setSelectedSubLocation(subLoc)}
         customDistanceKm={customDistanceKm}
         onCustomDistanceChange={(dist) => setCustomDistanceKm(dist)}
+        deliveryCity={deliveryCity}
+        deliveryAreaQuery={deliveryAreaQuery}
+        deliveryAreas={deliveryAreas}
+        selectedDeliveryArea={selectedDeliveryArea}
+        deliveryAreasLoading={deliveryAreasLoading}
+        deliveryAreasError={deliveryAreasError}
+        onDeliveryCityChange={handleDeliveryCityChange}
+        onDeliveryAreaQueryChange={(query) => {
+          setDeliveryAreaQuery(query);
+          if (selectedDeliveryArea && query !== selectedDeliveryArea.areaName) {
+            setSelectedDeliveryArea(null);
+            setCheckoutFormData((prev) => ({ ...prev, neighborhood: "" }));
+          }
+        }}
+        onDeliveryAreaSelect={handleDeliveryAreaSelect}
+        onRetryDeliveryAreas={() => setDeliveryAreasRequestKey((key) => key + 1)}
         onClose={() => setIsCartOpen(false)}
         onUpdateQuantity={handleUpdateCartQty}
         onRemoveItem={handleRemoveCartItem}
@@ -2056,7 +2107,10 @@ export default function App() {
         lastRemovedItem={lastRemovedItem}
         onAreaChange={(area) => {
           setSelectedArea(area);
-          setCheckoutFormData((prev) => ({ ...prev, area }));
+          setDeliveryCity(area as DeliveryCity);
+          setSelectedDeliveryArea(null);
+          setDeliveryAreaQuery("");
+          setCheckoutFormData((prev) => ({ ...prev, area, neighborhood: "" }));
           if (area === "Rawalpindi") {
             setSelectedSubLocation("Gulrez Housing Scheme (Phase 1-5)");
             setCustomDistanceKm(1.5);
@@ -2166,10 +2220,10 @@ export default function App() {
                       <span className="text-slate-400 font-sans">Contact Phone:</span>
                       <p className="font-bold text-slate-800">{checkoutFormData.phone}</p>
                     </div>
-                    <div className="space-y-1 sm:col-span-2">
-                      <span className="text-slate-400 font-sans">Delivery Area / sub-location:</span>
-                      <p className="font-bold text-slate-800">{checkoutFormData.area} — {selectedSubLocation}</p>
-                    </div>
+                      <div className="space-y-1 sm:col-span-2">
+                        <span className="text-slate-400 font-sans">Delivery Area:</span>
+                        <p className="font-bold text-slate-800">{deliveryCity || "—"} — {selectedDeliveryArea?.areaName || "—"}</p>
+                      </div>
                     <div className="space-y-1 sm:col-span-2">
                       <span className="text-slate-400 font-sans">Complete Home Address:</span>
                       <p className="font-semibold text-slate-700 bg-white border border-slate-200/60 p-2.5 rounded-xl">{checkoutFormData.address}</p>
@@ -2219,26 +2273,17 @@ export default function App() {
                   <div className="flex justify-between text-xs font-medium text-slate-500">
                     <span className="flex flex-col">
                       <span>Express Delivery Charges</span>
-                      <span className="text-[10px] text-slate-400 font-sans">
-                        Distance: {selectedSubLocation === "Custom" ? customDistanceKm : (DELIVERY_LOCATIONS.find(l => l.city === checkoutFormData.area && l.name === selectedSubLocation)?.distanceKm || 0)} km
-                      </span>
+                      <span className="text-[10px] text-slate-400 font-sans">Distance: {selectedDeliveryArea?.distanceKm ?? 0} km</span>
                     </span>
                     <span className="font-mono font-bold text-slate-800">
-                      Rs. {calculateDeliveryCharge(selectedSubLocation === "Custom" ? customDistanceKm : (DELIVERY_LOCATIONS.find(l => l.city === checkoutFormData.area && l.name === selectedSubLocation)?.distanceKm || 0))}
+                      {selectedDeliveryArea ? formatRs(calculateDeliveryCharge(selectedDeliveryArea.distanceKm, selectedDeliveryArea.deliveryRatePerKm)) : "—"}
                     </span>
                   </div>
 
                   <div className="flex justify-between items-center text-sm font-black text-slate-850 pt-2 border-t border-dashed border-slate-200">
                     <span>Grand Ledger Total</span>
                     <span className="text-blue-600 font-mono text-base font-black">
-                      Rs. {
-                        (() => {
-                          const sub = cartItems.reduce((acc, it) => acc + (it.price * it.quantity), 0);
-                          const dist = selectedSubLocation === "Custom" ? customDistanceKm : (DELIVERY_LOCATIONS.find(l => l.city === checkoutFormData.area && l.name === selectedSubLocation)?.distanceKm || 0);
-                          const del = calculateDeliveryCharge(dist);
-                          return sub + del;
-                        })()
-                      }
+                      {formatRs(cartItems.reduce((acc, it) => acc + (it.price * it.quantity), 0) + (selectedDeliveryArea ? calculateDeliveryCharge(selectedDeliveryArea.distanceKm, selectedDeliveryArea.deliveryRatePerKm) : 0))}
                     </span>
                   </div>
                 </div>

@@ -90,8 +90,8 @@ export const DELIVERY_LOCATIONS: DeliveryLocation[] = [
   { name: "Chatri Pani / Tarnol Link", city: "Islamabad", distanceKm: 26.0 }
 ];
 
-export const CHARGE_PER_KM = 50;
+export { calculateDeliveryCharge, DELIVERY_RATE_PER_KM, MIN_DELIVERY_CHARGE, formatRs, normalizeDistanceKm } from "./lib/deliveryCalculation";
+import { DELIVERY_RATE_PER_KM } from "./lib/deliveryCalculation";
 
-export function calculateDeliveryCharge(distanceKm: number): number {
-  return Math.round(distanceKm * CHARGE_PER_KM);
-}
+/** @deprecated Use DELIVERY_RATE_PER_KM from lib/deliveryCalculation. */
+export const CHARGE_PER_KM = DELIVERY_RATE_PER_KM;

@@ -1,11 +1,15 @@
-const CACHE_NAME = "babaydee-v1";
+const CACHE_NAME = "babaydee-v2";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
   "/manifest.json",
   "/robots.txt",
   "/sitemap.xml",
-  "/logo.jpg"
+  "/favicon.ico",
+  "/logo.jpg",
+  "/apple-touch-icon.png",
+  "/pwa-icon-192.png",
+  "/pwa-icon-512.png"
 ];
 
 // Install Event: Pre-cache core shell

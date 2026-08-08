@@ -1,6 +1,7 @@
 import React, { useState, useEffect, FormEvent, useRef } from "react";
 import { Search, Loader2, Clock, CheckCircle, MapPin, Truck, Box, Smartphone } from "lucide-react";
 import { Order } from "../types";
+import { formatRs } from "../lib/deliveryCalculation";
 import { LiveTrackingMap } from "./LiveTrackingMap";
 import { useToast } from "./ToastContainer";
 
@@ -183,7 +184,8 @@ export function OrderTracker() {
             <div className="text-left md:text-right">
               <span className="text-[10px] uppercase font-mono font-bold text-slate-400 block">Deliver To</span>
               <span className="text-xs font-bold text-slate-800">{order.customer.name}</span>
-              <span className="text-[11px] text-slate-500 block">{order.customer.address}, {order.customer.area}</span>
+              <span className="text-[11px] text-slate-500 block">{order.customer.city ? `${order.customer.city}, ` : ""}{order.customer.address}, {order.customer.area}</span>
+              {order.delivery && <span className="text-[10px] text-emerald-700 font-bold block mt-1">{order.delivery.distanceKm} km · {formatRs(order.delivery.deliveryCharge)} delivery</span>}
             </div>
 
             {order.deliveryDate && (
@@ -319,8 +321,9 @@ export function OrderTracker() {
                 </div>
                 <div className="flex justify-between">
                   <span>Express Delivery Charges</span>
-                  <span className="font-bold text-slate-700">Rs. {order.deliveryCharges}</span>
+                  <span className="font-bold text-slate-700">{formatRs(order.delivery?.deliveryCharge ?? order.deliveryCharges)}</span>
                 </div>
+                {order.delivery && <div className="flex justify-between text-[10px] text-slate-400"><span>Verified distance / rate</span><span>{order.delivery.distanceKm} km @ Rs. {order.delivery.ratePerKm}/km</span></div>}
                 <div className="flex justify-between pt-1.5 border-t border-dashed border-slate-200 text-sm font-black text-slate-800">
                   <span>Grand Total</span>
                   <span className="text-blue-600">Rs. {order.total}</span>

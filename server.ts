@@ -10,6 +10,14 @@ const PORT = 3000;
 async function startServer() {
   app.use(compression());
 
+  // The supplied public/favicon.ico is the current brand JPEG stored under the
+  // legacy .ico filename. Serve the matching MIME type so browsers and PWA
+  // clients decode the asset consistently in development and production.
+  app.get("/favicon.ico", (_req, res) => {
+    res.type("image/jpeg");
+    res.sendFile(path.join(process.cwd(), "public", "favicon.ico"));
+  });
+
   // Vite development middleware vs production static setup
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

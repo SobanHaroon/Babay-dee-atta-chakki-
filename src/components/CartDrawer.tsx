@@ -1,7 +1,8 @@
 import { motion, AnimatePresence } from "motion/react";
-import { CartItem } from "../types";
+import { CartItem, DeliveryArea, DeliveryCity } from "../types";
 import { X, Plus, Minus, Trash2, ShoppingBag, Truck, Sparkles, Gift, Check, CheckCircle2, Navigation, Loader2 } from "lucide-react";
-import { DELIVERY_LOCATIONS, calculateDeliveryCharge, CHARGE_PER_KM } from "../deliveryData";
+import { calculateDeliveryCharge, formatRs } from "../lib/deliveryCalculation";
+import { DeliveryAreaSelector } from "./DeliveryAreaSelector";
 import { AnimatedScore, AnimatedNumber, AnimeCartItem } from "./AnimatedComponents";
 import { ProductIcon } from "./ProductIcon";
 import { WeightQtyEditor, displayFormattedQty } from "./WeightQtyEditor";
@@ -15,6 +16,16 @@ interface CartDrawerProps {
   onSubLocationChange: (subLoc: string) => void;
   customDistanceKm: number;
   onCustomDistanceChange: (dist: number) => void;
+  deliveryCity: DeliveryCity | "";
+  deliveryAreaQuery: string;
+  deliveryAreas: DeliveryArea[];
+  selectedDeliveryArea: DeliveryArea | null;
+  deliveryAreasLoading: boolean;
+  deliveryAreasError: string;
+  onDeliveryCityChange: (city: DeliveryCity) => void;
+  onDeliveryAreaQueryChange: (query: string) => void;
+  onDeliveryAreaSelect: (area: DeliveryArea) => void;
+  onRetryDeliveryAreas: () => void;
   onClose: () => void;
   onUpdateQuantity: (id: string, q: number) => void;
   onRemoveItem: (id: string) => void;
@@ -34,6 +45,16 @@ export function CartDrawer({
   onSubLocationChange,
   customDistanceKm,
   onCustomDistanceChange,
+  deliveryCity,
+  deliveryAreaQuery,
+  deliveryAreas,
+  selectedDeliveryArea,
+  deliveryAreasLoading,
+  deliveryAreasError,
+  onDeliveryCityChange,
+  onDeliveryAreaQueryChange,
+  onDeliveryAreaSelect,
+  onRetryDeliveryAreas,
   onClose,
   onUpdateQuantity,
   onRemoveItem,
@@ -46,12 +67,9 @@ export function CartDrawer({
 }: CartDrawerProps) {
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  // Delivery available only in Rawalpindi and Islamabad
-  const subLocObj = DELIVERY_LOCATIONS.find(l => l.city === selectedArea && l.name === selectedSubLocation);
-  const distance = selectedSubLocation === "Custom" ? customDistanceKm : (subLocObj ? subLocObj.distanceKm : 0);
-  const rawDeliveryCharges = calculateDeliveryCharge(distance);
-  const deliveryCharges = rawDeliveryCharges;
-  
+  const deliveryCharges = selectedDeliveryArea
+    ? calculateDeliveryCharge(selectedDeliveryArea.distanceKm, selectedDeliveryArea.deliveryRatePerKm)
+    : 0;
   const total = subtotal + deliveryCharges;
 
   return (
@@ -168,112 +186,38 @@ export function CartDrawer({
                         ))}
                       </div>
 
-                      {/* Delivery Location Area Selection */}
+                      {/* Database-backed delivery destination selection */}
                       <div className="space-y-3 bg-white p-3 border border-slate-200/60 rounded-xl shadow-xs mt-2 shrink-0">
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-bold text-slate-500 block uppercase tracking-wide">
-                              Delivery Destination City
-                            </label>
-                            {onDetectLocation && (
-                              <button
-                                type="button"
-                                onClick={onDetectLocation}
-                                disabled={isDetectingLocation}
-                                className="text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                              >
-                                {isDetectingLocation ? (
-                                  <>
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                    <span>Locating...</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Navigation className="w-3 h-3 text-blue-600" />
-                                    <span>Detect Location</span>
-                                  </>
-                                )}
-                              </button>
-                            )}
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Delivery Destination</span>
+                          {onDetectLocation && (
                             <button
-                              onClick={() => onAreaChange("Rawalpindi")}
-                              id="select-pindi-btn"
-                              className={`h-10 text-xs font-bold rounded-lg border cursor-pointer text-center transition-all flex items-center justify-center ${
-                                selectedArea === "Rawalpindi"
-                                  ? "bg-[#3b4414] border-[#3b4414] text-white shadow-xs"
-                                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                              }`}
+                              type="button"
+                              onClick={onDetectLocation}
+                              disabled={isDetectingLocation}
+                              className="text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer disabled:opacity-50"
                             >
-                              Rawalpindi
+                              {isDetectingLocation ? <Loader2 className="w-3 h-3 animate-spin" /> : <Navigation className="w-3 h-3" />}
+                              <span>{isDetectingLocation ? "Locating..." : "Detect Location"}</span>
                             </button>
-                            <button
-                              onClick={() => onAreaChange("Islamabad")}
-                              id="select-islo-btn"
-                              className={`h-10 text-xs font-bold rounded-lg border cursor-pointer text-center transition-all flex items-center justify-center ${
-                                selectedArea === "Islamabad"
-                                  ? "bg-[#3b4414] border-[#3b4414] text-white shadow-xs"
-                                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                              }`}
-                            >
-                              Islamabad
-                            </button>
-                          </div>
+                          )}
                         </div>
-
-                        {/* Sub-location Selector */}
-                        {selectedArea && (
-                          <div className="space-y-1.5 pt-1.5 border-t border-slate-100">
-                            <label htmlFor="cart-sublocation-select" className="text-[10px] font-bold text-slate-500 block uppercase tracking-wide">
-                              Select Your Area / Sector (Rs. 50 / km)
-                            </label>
-                            <select
-                              id="cart-sublocation-select"
-                              value={selectedSubLocation}
-                              onChange={(e) => onSubLocationChange(e.target.value)}
-                              className="w-full text-xs p-2 bg-slate-55 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-lg outline-none cursor-pointer font-medium text-slate-700 h-9"
-                            >
-                              {DELIVERY_LOCATIONS.filter(l => l.city === selectedArea).map((loc) => (
-                                <option key={loc.name} value={loc.name}>
-                                  {loc.name} ({loc.distanceKm} km - Rs. {loc.distanceKm * CHARGE_PER_KM})
-                                </option>
-                              ))}
-                              <option value="Custom">Other / Custom Distance...</option>
-                            </select>
-                          </div>
-                        )}
-
-                        {/* Custom Distance Slider / Input if Custom is Selected */}
-                        {selectedArea && selectedSubLocation === "Custom" && (
-                          <div className="space-y-1.5 p-2 bg-slate-50/80 rounded-lg border border-dashed border-slate-200">
-                            <div className="flex justify-between text-[11px] font-semibold text-slate-600">
-                              <span>Specify Distance:</span>
-                              <span className="text-[#3b4414] font-bold">{customDistanceKm} km</span>
-                            </div>
-                            <input
-                              type="range"
-                              min="1"
-                              max="45"
-                              step="0.5"
-                              value={customDistanceKm}
-                              onChange={(e) => onCustomDistanceChange(parseFloat(e.target.value))}
-                              className="w-full accent-[#3b4414] cursor-pointer h-1.5 bg-slate-200 rounded-lg appearance-none"
-                            />
-                            <div className="flex justify-between text-[10px] text-slate-400">
-                              <span>1 km (Rs. 50)</span>
-                              <span>45 km (Rs. 2250)</span>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Distance summary feedback badge */}
-                        {selectedArea && (
+                        <DeliveryAreaSelector
+                          city={deliveryCity}
+                          query={deliveryAreaQuery}
+                          areas={deliveryAreas}
+                          selectedArea={selectedDeliveryArea}
+                          loading={deliveryAreasLoading}
+                          error={deliveryAreasError}
+                          onCityChange={onDeliveryCityChange}
+                          onQueryChange={onDeliveryAreaQueryChange}
+                          onSelect={onDeliveryAreaSelect}
+                          onRetry={onRetryDeliveryAreas}
+                        />
+                        {selectedDeliveryArea && selectedDeliveryArea.available && (
                           <div className="flex items-center gap-1.5 text-[10.5px] text-[#3b4414] font-medium bg-[#3b4414]/5 p-2 rounded-lg">
                             <Truck className="w-3.5 h-3.5 text-[#3b4414]" />
-                            <span>
-                              Milling Store Distance: <strong className="font-bold">{distance} km</strong> (@ Rs. 50/km)
-                            </span>
+                            <span>Verified distance: <strong>{selectedDeliveryArea.distanceKm} km</strong> · {formatRs(deliveryCharges)}</span>
                           </div>
                         )}
                       </div>
@@ -294,10 +238,10 @@ export function CartDrawer({
                     <div className="flex justify-between items-center">
                       <span>Express Delivery Charges</span>
                       <span className="font-bold text-slate-805">
-                        {!selectedArea ? (
+                        {!selectedDeliveryArea ? (
                           <span className="text-slate-400">Select destination area</span>
                         ) : (
-                          `Rs. ${deliveryCharges}`
+                          formatRs(deliveryCharges)
                         )}
                       </span>
                     </div>
@@ -318,14 +262,14 @@ export function CartDrawer({
                       onCheckout();
                     }}
                     id="cart-drawer-checkout-btn"
-                    disabled={!selectedArea}
+                    disabled={!selectedDeliveryArea || !selectedDeliveryArea.available}
                     className={`w-full font-bold px-4 py-3 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer h-11 ${
-                      selectedArea
+                      selectedDeliveryArea?.available
                         ? "bg-amber-500 hover:bg-amber-600 active:scale-98 text-slate-950 shadow-md"
                         : "bg-slate-200 text-slate-400 cursor-not-allowed"
                     }`}
                   >
-                    <span>{selectedArea ? "Proceed to Shipping" : "Select Area to Continue"}</span>
+                    <span>{selectedDeliveryArea?.available ? "Proceed to Shipping" : "Select an available area"}</span>
                   </button>
                 </div>
               )}

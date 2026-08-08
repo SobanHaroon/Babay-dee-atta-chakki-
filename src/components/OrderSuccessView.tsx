@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { CheckCircle2, Copy, Check, ShoppingBag, Truck, MapPin, Phone, Calendar, Bell, ExternalLink, ShieldCheck, Printer, Download, RotateCcw, Star, Award, Users, Clock, Sparkles, TrendingUp } from "lucide-react";
 import { Order } from "../types";
+import { formatRs } from "../lib/deliveryCalculation";
 
 const RECENT_CUSTOMER_FEED = [
   { id: "rc-1", name: "Usman Ali", area: "Gulrez Phase 3, Rawalpindi", item: "10kg Whole Wheat Chakki Atta", time: "2 mins ago" },
@@ -396,8 +397,14 @@ export function OrderSuccessView({ order, onClose, onTrack, onReorder }: OrderSu
           </tr>
           <tr>
             <td class="meta-label">Delivery Address:</td>
-            <td>${order.customer.address}, ${order.customer.area}</td>
+            <td>${order.customer.city || ""}, ${order.customer.area}, ${order.customer.address}</td>
           </tr>
+          ${order.delivery ? `
+          <tr>
+            <td class="meta-label">Delivery Distance / Rate:</td>
+            <td>${order.delivery.distanceKm} km @ Rs. ${order.delivery.ratePerKm}/km (${order.delivery.distanceSource})</td>
+          </tr>
+          ` : ''}
           <tr>
             <td class="meta-label">Payment Method:</td>
             <td>${order.paymentMethod}</td>
@@ -485,8 +492,13 @@ export function OrderSuccessView({ order, onClose, onTrack, onReorder }: OrderSu
     text += "CUSTOMER DETAILS:\n";
     text += `Name      : ${order.customer.name}\n`;
     text += `Contact   : ${order.customer.phone}\n`;
-    text += `Address   : ${order.customer.address}\n`;
+    text += `City      : ${order.customer.city || ""}\n`;
     text += `Area      : ${order.customer.area}\n`;
+    text += `Address   : ${order.customer.address}\n`;
+    if (order.delivery) {
+      text += `Distance  : ${order.delivery.distanceKm} km\n`;
+      text += `Rate      : Rs. ${order.delivery.ratePerKm}/km\n`;
+    }
     text += `Payment   : ${order.paymentMethod}\n`;
     if (order.deliveryDate) {
       text += `Delivery  : ${order.deliveryDate} (${order.deliverySlot})\n`;
@@ -660,10 +672,20 @@ export function OrderSuccessView({ order, onClose, onTrack, onReorder }: OrderSu
                 <div>
                   <h4 className="font-bold text-slate-650">Delivery Address</h4>
                   <p className="text-slate-500 leading-normal font-medium">
-                    {order.customer.address}, <span className="font-bold text-slate-800">{order.customer.area}</span>
+                    {order.customer.city ? `${order.customer.city}, ` : ""}{order.customer.address}, <span className="font-bold text-slate-800">{order.customer.area}</span>
                   </p>
                 </div>
               </div>
+
+              {order.delivery && (
+                <div className="flex items-start gap-2.5 bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-200/70">
+                  <Truck className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
+                  <div>
+                    <h4 className="font-bold text-emerald-900 text-[11px] uppercase tracking-wide">Verified Delivery Pricing</h4>
+                    <p className="text-slate-600 font-medium text-[11px]">{order.delivery.distanceKm} km · Rs. {order.delivery.ratePerKm}/km · {formatRs(order.delivery.deliveryCharge)}</p>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-start gap-2.5">
                 <Calendar className="w-4 h-4 text-slate-450 shrink-0 mt-0.5 text-blue-600" />

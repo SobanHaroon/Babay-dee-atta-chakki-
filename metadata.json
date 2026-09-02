@@ -1,0 +1,8 @@
+{
+  "name": "Babay Dee Atta Chakki",
+  "description": "Premium Pakistani e-commerce store for flour, rice, lentils, dry fruits, and herbs in Rawalpindi and Islamabad.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

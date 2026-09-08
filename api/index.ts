@@ -40,8 +40,13 @@ app.use((req, _res, next) => {
 });
 
 // Initialize Supabase Client
-const dbUrl = process.env.SUPABASE_URL?.trim();
-const dbKey = (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || "").trim();
+const dbUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").trim();
+const dbKey = (
+  process.env.SUPABASE_SECRET_KEY ||
+  process.env.SUPABASE_PUBLISHABLE_KEY ||
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  ""
+).trim();
 const dbClient = dbUrl && dbKey ? createClient(dbUrl, dbKey) : null;
 
 // Dynamic delivery areas store initialized with 299 baseline records

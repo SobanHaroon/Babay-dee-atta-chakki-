@@ -8,29 +8,14 @@ export interface LatLngPoint {
   lng: number;
 }
 
-export const GEOAPIFY_MAP_TILES_KEY =
-  process.env.GEOAPIFY_MAP_TILES_KEY ||
-  process.env.GEOAPIFY_API_KEY ||
-  "443a4948e9f344ceb1d25b7ac672fabe";
-
-export const GEOAPIFY_ROUTING_KEY =
-  process.env.GEOAPIFY_ROUTING_KEY ||
-  process.env.GEOAPIFY_API_KEY ||
-  "807f1c518966416380a21121a25c2dcc";
-
-export const GEOAPIFY_GEOCODING_KEY =
-  process.env.GEOAPIFY_GEOCODING_KEY ||
-  process.env.GEOAPIFY_API_KEY ||
-  "d15cdaa40d7f471b96b99ddeb2c5a6f6";
-
 /**
  * Returns the Geoapify raster tile URL template for Leaflet TileLayer
  */
-export function getGeoapifyTileUrl(style: string = "osm-bright", apiKey: string = GEOAPIFY_MAP_TILES_KEY): string {
+export function getGeoapifyTileUrl(style: string = "osm-bright", apiKey: string = ""): string {
   return `https://maps.geoapify.com/v1/tile/${style}/{z}/{x}/{y}.png?apiKey=${apiKey}`;
 }
 
-export function getGeoapifyRetinaTileUrl(style: string = "osm-bright", apiKey: string = GEOAPIFY_MAP_TILES_KEY): string {
+export function getGeoapifyRetinaTileUrl(style: string = "osm-bright", apiKey: string = ""): string {
   return `https://maps.geoapify.com/v1/tile/${style}/{z}/{x}/{y}@2x.png?apiKey=${apiKey}`;
 }
 
@@ -40,7 +25,7 @@ export function getGeoapifyRetinaTileUrl(style: string = "osm-bright", apiKey: s
  */
 export async function searchGeoapifyPlaces(
   query: string,
-  apiKey: string = GEOAPIFY_GEOCODING_KEY
+  apiKey: string = ""
 ): Promise<Array<{
   placeId: string;
   formatted: string;
@@ -761,7 +746,7 @@ export function areAddressesMatching(addr1: string, addr2: string): boolean {
 export async function reverseGeocodeLatLng(
   lat: number,
   lng: number,
-  apiKey: string = GEOAPIFY_GEOCODING_KEY
+  apiKey: string = ""
 ): Promise<{ address: string; city: string; area: string; extracted?: GeoapifyExtractedComponents; omitted?: string[] }> {
   // 1. Try server-side reverse geocoding endpoint first (bypasses browser CORS, has full logging and Geoapify access)
   try {

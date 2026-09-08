@@ -1,0 +1,5 @@
+const env = (import.meta as any).env || {};
+
+export const GEOAPIFY_MAP_TILES_KEY = env.VITE_GEOAPIFY_MAP_TILES_KEY || env.VITE_GEOAPIFY_API_KEY || "";
+export const GEOAPIFY_ROUTING_KEY = env.VITE_GEOAPIFY_ROUTING_KEY || env.VITE_GEOAPIFY_API_KEY || "";
+export const GEOAPIFY_GEOCODING_KEY = env.VITE_GEOAPIFY_GEOCODING_KEY || env.VITE_GEOAPIFY_API_KEY || "";

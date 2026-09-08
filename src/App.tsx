@@ -85,10 +85,7 @@ import heroRice from "./assets/images/slide_rice_1785374044466.jpg";
 import heroSpices from "./assets/images/slide_spices_1785374065063.jpg";
 
 export const GOOGLE_MAPS_PLATFORM_KEY =
-  process.env.GOOGLE_MAPS_PLATFORM_KEY ||
-  (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY ||
-  (typeof window !== "undefined" && (window as any).GOOGLE_MAPS_PLATFORM_KEY) ||
-  "AIzaSyC2FI26gOoyIrGzkSmPxyGKemsY3xTMets";
+  (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY || "";
 
 export const STORE_EXACT_LOCATION = {
   lat: 33.567348,

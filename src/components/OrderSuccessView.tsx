@@ -364,7 +364,6 @@ function EmailReceiptCard({ order }: { order: Order }) {
 
 export function OrderSuccessView({ order, onClose, onTrack, onReorder }: OrderSuccessViewProps) {
   const [copied, setCopied] = useState(false);
-  const ntfyTopic = "baby_dee_chakki_orders_0c518";
 
   const getFriendlyDate = (dateStr?: string) => {
     if (!dateStr) return "";

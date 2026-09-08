@@ -24,10 +24,9 @@ import {
   searchGeoapifyPlaces,
   findClosestTwinCityZone,
   reverseGeocodeLatLng,
-  GEOAPIFY_MAP_TILES_KEY,
-  GEOAPIFY_GEOCODING_KEY,
   TWIN_CITIES_ZONES
 } from "../lib/mapUtils";
+import { GEOAPIFY_MAP_TILES_KEY, GEOAPIFY_GEOCODING_KEY } from "../lib/browserMapConfig";
 
 // Exact coordinates from user store location: https://maps.app.goo.gl/k7Cjakmyvd227jpE7
 export const STORE_EXACT_COORDINATES = {

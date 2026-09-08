@@ -38,6 +38,8 @@ async function startServer() {
   });
 }
 
-startServer().catch((err) => {
-  console.error("Critical server bootstrap error:", err);
-});
+if (process.env.VERCEL !== "1") {
+  startServer().catch((err) => {
+    console.error("Critical server bootstrap error:", err);
+  });
+}

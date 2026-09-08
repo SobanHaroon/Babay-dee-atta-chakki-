@@ -1,6 +1,6 @@
 import { supabase as supabaseClient } from "./supabaseClient";
 
-export const NTFY_TOPIC = "baby_dee_chakki_orders_0c518";
+const NTFY_TOPIC = ((import.meta as any).env?.VITE_NTFY_TOPIC || "").trim();
 
 /**
  * Sends Ntfy order push notification.
@@ -58,6 +58,7 @@ ${order.discount > 0 ? `Milestone Discount: Rs. ${order.discount}\n` : ""}------
 Grand Total Ledger: Rs. ${order.total}
 Settlement Method: ${order.paymentMethod || "Cash on Delivery"}`;
 
+    if (!NTFY_TOPIC) return false;
     const res = await fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
       method: "POST",
       headers: {

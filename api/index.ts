@@ -30,10 +30,19 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Vercel may invoke an Express function with the /api prefix already removed.
+// Normalize that form while preserving the full /api paths used locally.
+app.use((req, _res, next) => {
+  if (process.env.VERCEL === "1" && !req.path.startsWith("/api/") && req.path !== "/api") {
+    req.url = `/api${req.url}`;
+  }
+  next();
+});
+
 // Initialize Supabase Client
-const dbUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://dlinknypnlmcrhgbediu.supabase.co";
-const dbKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_KkOjGDoE3yq7tKIKzIfajg_sIoyPlUT";
-const dbClient = createClient(dbUrl, dbKey);
+const dbUrl = process.env.SUPABASE_URL?.trim();
+const dbKey = (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || "").trim();
+const dbClient = dbUrl && dbKey ? createClient(dbUrl, dbKey) : null;
 
 // Dynamic delivery areas store initialized with 299 baseline records
 let CUSTOM_DELIVERY_AREAS: DeliveryAreaRecord[] = [...INITIAL_DELIVERY_AREAS];
@@ -266,7 +275,8 @@ async function getSupabaseProducts(): Promise<any[]> {
 // Helper function to trigger order notifications to the configured Ntfy topic immediately after successful checkout
 async function triggerOrderNotification(order: any): Promise<boolean> {
   try {
-    const ntfyTopic = process.env.NTFY_TOPIC || "baby_dee_chakki_orders_0c518";
+    const ntfyTopic = process.env.NTFY_TOPIC?.trim();
+    if (!ntfyTopic) return false;
     const items = Array.isArray(order.items) ? order.items : [];
     const itemsText = items
       .map((item: any) => `• ${item.name || "Item"} (${item.quantity || 1} ${item.unit || "unit"}) @ Rs.${item.price || 0} = Rs.${(item.price || 0) * (item.quantity || 1)}`)
@@ -456,10 +466,8 @@ app.post("/api/order/feedback", (req, res) => {
 });
 
 // Geoapify API Keys for Map Tiles, Driving Road Routing, and Forward/Reverse Geocoding
-const GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY || "443a4948e9f344ceb1d25b7ac672fabe";
-const GEOAPIFY_ROUTING_KEY = process.env.GEOAPIFY_ROUTING_KEY || process.env.GEOAPIFY_API_KEY || "807f1c518966416380a21121a25c2dcc";
-const GEOAPIFY_GEOCODING_KEY = process.env.GEOAPIFY_GEOCODING_KEY || process.env.GEOAPIFY_API_KEY || "d15cdaa40d7f471b96b99ddeb2c5a6f6";
-const GEOAPIFY_MAP_TILES_KEY = process.env.GEOAPIFY_MAP_TILES_KEY || process.env.GEOAPIFY_API_KEY || "443a4948e9f344ceb1d25b7ac672fabe";
+const GEOAPIFY_ROUTING_KEY = process.env.GEOAPIFY_ROUTING_KEY?.trim() || process.env.GEOAPIFY_API_KEY?.trim() || "";
+const GEOAPIFY_GEOCODING_KEY = process.env.GEOAPIFY_GEOCODING_KEY?.trim() || process.env.GEOAPIFY_API_KEY?.trim() || "";
 
 // Server-side robust reverse geocoding (Geoapify Geocoding API + OSM Nominatim fallback + Twin Cities sector resolver)
 export async function serverReverseGeocode(lat: number, lng: number): Promise<{ address: string; city: string; area: string; extracted?: any; omitted?: any }> {
@@ -1323,6 +1331,7 @@ app.post("/api/checkout", async (req, res) => {
     ACTIVE_ORDERS.push(newOrder);
 
     // Save order data dynamically to the connected Supabase orders database if available
+    let persistedToSupabase = !dbClient;
     if (dbClient) {
       try {
         const serializedMetadata = {
@@ -1399,6 +1408,7 @@ app.post("/api/checkout", async (req, res) => {
           if (!error) {
             console.log(`Successfully wrote order BDEC-${numericId} to Supabase orders table! Inserted fields:`, Object.keys(insertPayload));
             insertedSuccessfully = true;
+            persistedToSupabase = true;
             break;
           }
 
@@ -1415,37 +1425,51 @@ app.post("/api/checkout", async (req, res) => {
       }
     }
 
-    // Await order notification dispatch (Ntfy push & Twilio SMS confirmation)
-    try {
-      await triggerOrderNotification(newOrder);
-    } catch (ntfyErr) {
-      console.error("Notification dispatch error in checkout handler:", ntfyErr);
+    if (!persistedToSupabase) {
+      return res.status(503).json({
+        success: false,
+        error: "Order could not be saved to the order database. Please try again."
+      });
     }
 
-    let smsResult: any = null;
-    try {
-      smsResult = await sendOrderConfirmationSMS(newOrder);
-      console.log(`[Checkout SMS] Customer confirmation SMS dispatch result for ${newOrder.id}:`, smsResult);
-    } catch (smsErr) {
-      console.error("SMS notification dispatch error in checkout handler:", smsErr);
-    }
+    // Notifications are optional follow-up work. A gateway failure must not undo a saved order.
+    const targetEmail = (email || req.body?.customerEmail || req.body?.customer?.email || newOrder.customer?.email || "").trim();
+    const notificationResults = await Promise.allSettled([
+      triggerOrderNotification(newOrder),
+      sendOrderConfirmationSMS(newOrder),
+      targetEmail ? sendOrderConfirmationEmail(newOrder, targetEmail) : Promise.resolve(null)
+    ]);
 
-    let emailResult: any = null;
-    try {
-      const targetEmail = (email || req.body?.customerEmail || req.body?.customer?.email || newOrder.customer?.email || "").trim();
-      if (targetEmail) {
-        emailResult = await sendOrderConfirmationEmail(newOrder, targetEmail);
-        console.log(`[Checkout Email] Customer receipt email dispatch result for ${newOrder.id}:`, emailResult);
-        (newOrder as any).emailStatus = emailResult;
+    const ntfyResult = notificationResults[0];
+    const smsResult = notificationResults[1].status === "fulfilled" ? notificationResults[1].value : null;
+    const emailResult = notificationResults[2].status === "fulfilled" ? notificationResults[2].value : null;
+
+    notificationResults.forEach((result, index) => {
+      if (result.status === "rejected") {
+        console.error(`[Checkout] Optional notification ${index + 1} failed:`, result.reason);
       }
-    } catch (emailErr) {
-      console.error("Email receipt notification dispatch error in checkout handler:", emailErr);
+    });
+    if (smsResult) {
+      console.log(`[Checkout SMS] ${newOrder.id}:`, {
+        success: smsResult.success,
+        gateway: smsResult.gateway
+      });
+    }
+    if (emailResult) {
+      console.log(`[Checkout Email] ${newOrder.id}:`, {
+        success: emailResult.success,
+        delivered: emailResult.delivered,
+        provider: emailResult.provider,
+        recipient: emailResult.recipient
+      });
+      (newOrder as any).emailStatus = emailResult;
     }
 
     return res.json({
       success: true,
       orderId: orderId,
       order: newOrder,
+      ntfyStatus: ntfyResult.status === "fulfilled" ? ntfyResult.value : false,
       smsStatus: smsResult,
       emailStatus: emailResult
     });
@@ -1528,8 +1552,6 @@ app.post("/api/notifications/ntfy", async (req, res) => {
 // Helper to resolve an order by ID from memory or Supabase database
 async function getOrderById(orderId: string): Promise<any | null> {
   const cleanId = String(orderId).trim();
-  let found = ACTIVE_ORDERS.find(o => o.id === cleanId || o.id === `BDEC-${cleanId}`);
-  if (found) return found;
 
   if (dbClient) {
     const numericId = parseInt(cleanId.replace("BDEC-", ""), 10);
@@ -1573,6 +1595,10 @@ async function getOrderById(orderId: string): Promise<any | null> {
       }
     }
   }
+
+  // Local-memory fallback keeps development usable when Supabase is not configured.
+  const found = ACTIVE_ORDERS.find(o => o.id === cleanId || o.id === `BDEC-${cleanId}`);
+  if (found) return found;
   return null;
 }
 
@@ -2034,6 +2060,19 @@ app.get("/sitemap.xml", async (req, res) => {
     res.header("Content-Type", "text/plain");
     return res.status(500).send("Unable to compile sitemap xml catalog right now.");
   }
+});
+
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/")) {
+    return res.status(404).json({ error: "API route not found" });
+  }
+  next();
+});
+
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error("Unhandled API error:", err);
+  if (res.headersSent) return;
+  res.status(500).json({ error: "Internal server error" });
 });
 
 export default app;

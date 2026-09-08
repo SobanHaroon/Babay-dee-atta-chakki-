@@ -6,12 +6,6 @@ import {defineConfig} from 'vite';
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
-    define: {
-      'process.env.GEOAPIFY_API_KEY': JSON.stringify(process.env.GEOAPIFY_API_KEY || process.env.VITE_GEOAPIFY_API_KEY || '443a4948e9f344ceb1d25b7ac672fabe'),
-      'process.env.GEOAPIFY_MAP_TILES_KEY': JSON.stringify(process.env.GEOAPIFY_MAP_TILES_KEY || process.env.GEOAPIFY_API_KEY || '443a4948e9f344ceb1d25b7ac672fabe'),
-      'process.env.GEOAPIFY_GEOCODING_KEY': JSON.stringify(process.env.GEOAPIFY_GEOCODING_KEY || process.env.VITE_GEOAPIFY_GEOCODING_KEY || 'd15cdaa40d7f471b96b99ddeb2c5a6f6'),
-      'process.env.GEOAPIFY_ROUTING_KEY': JSON.stringify(process.env.GEOAPIFY_ROUTING_KEY || process.env.VITE_GEOAPIFY_ROUTING_KEY || '807f1c518966416380a21121a25c2dcc')
-    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

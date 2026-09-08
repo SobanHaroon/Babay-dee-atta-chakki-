@@ -1,8 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 import { INITIAL_DELIVERY_AREAS } from "../src/deliveryData";
 
-const dbUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://dlinknypnlmcrhgbediu.supabase.co";
-const dbKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_KkOjGDoE3yq7tKIKzIfajg_sIoyPlUT";
+const dbUrl = process.env.SUPABASE_URL;
+const dbKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+
+if (!dbUrl || !dbKey) {
+  throw new Error("SUPABASE_URL and SUPABASE_SECRET_KEY or SUPABASE_PUBLISHABLE_KEY are required.");
+}
 
 const supabase = createClient(dbUrl, dbKey);
 

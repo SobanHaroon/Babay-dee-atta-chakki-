@@ -187,7 +187,17 @@ function EmailReceiptCard({ order }: { order: Order }) {
           order
         })
       });
-      const data = await res.json();
+      const responseText = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        throw new Error(
+          res.ok
+            ? "The email service returned an invalid response."
+            : `The email service is unavailable (${res.status}). Please try again later.`
+        );
+      }
       if (data.success || data.delivered) {
         setSendStatus({
           delivered: true,

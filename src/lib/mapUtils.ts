@@ -9,20 +9,18 @@ export interface LatLngPoint {
 }
 
 export const GEOAPIFY_MAP_TILES_KEY =
-  (import.meta as any).env?.VITE_GEOAPIFY_MAP_TILES_KEY ||
-  (import.meta as any).env?.VITE_GEOAPIFY_API_KEY ||
   process.env.GEOAPIFY_MAP_TILES_KEY ||
   process.env.GEOAPIFY_API_KEY ||
   "443a4948e9f344ceb1d25b7ac672fabe";
 
 export const GEOAPIFY_ROUTING_KEY =
-  (import.meta as any).env?.VITE_GEOAPIFY_ROUTING_KEY ||
-  (import.meta as any).env?.VITE_GEOAPIFY_API_KEY ||
+  process.env.GEOAPIFY_ROUTING_KEY ||
+  process.env.GEOAPIFY_API_KEY ||
   "807f1c518966416380a21121a25c2dcc";
 
 export const GEOAPIFY_GEOCODING_KEY =
-  (import.meta as any).env?.VITE_GEOAPIFY_GEOCODING_KEY ||
-  (import.meta as any).env?.VITE_GEOAPIFY_API_KEY ||
+  process.env.GEOAPIFY_GEOCODING_KEY ||
+  process.env.GEOAPIFY_API_KEY ||
   "d15cdaa40d7f471b96b99ddeb2c5a6f6";
 
 /**

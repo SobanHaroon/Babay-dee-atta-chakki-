@@ -1,7 +1,8 @@
 import "dotenv/config";
 import express from "express";
 import { createClient } from "@supabase/supabase-js";
-import { INITIAL_DELIVERY_AREAS, calculateDeliveryCharge, findDeliveryArea, DeliveryAreaRecord } from "../src/deliveryData";
+import { INITIAL_DELIVERY_AREAS, calculateDeliveryCharge, findDeliveryArea } from "../src/deliveryData";
+import type { DeliveryAreaRecord } from "../src/deliveryData";
 import { extractCityAndArea, findClosestTwinCityZone, formatGeoapifyAddress } from "../src/lib/mapUtils";
 import { sendOrderConfirmationSMS, sendOrderStatusSMS, isSMSGatewayConfigured, isSMSPKConfigured, isTwilioConfigured } from "./smsService";
 import {

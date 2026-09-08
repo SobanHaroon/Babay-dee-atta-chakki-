@@ -1331,7 +1331,8 @@ app.post("/api/checkout", async (req, res) => {
     ACTIVE_ORDERS.push(newOrder);
 
     // Save order data dynamically to the connected Supabase orders database if available
-    let persistedToSupabase = !dbClient;
+    const isLocalDevelopment = process.env.VERCEL !== "1" && process.env.NODE_ENV !== "production";
+    let persistedToSupabase = !dbClient && isLocalDevelopment;
     if (dbClient) {
       try {
         const serializedMetadata = {

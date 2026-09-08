@@ -258,7 +258,14 @@ function mapSupabaseProduct(p: any) {
 async function getSupabaseProducts(): Promise<any[]> {
   try {
     const { data, error } = await dbClient.from("products").select("*");
-    if (error || !data || data.length === 0) return [];
+    if (error) {
+      console.error("Supabase products query failed:", error.message);
+      return [];
+    }
+    if (!data || data.length === 0) {
+      console.warn("Supabase products query returned zero rows.");
+      return [];
+    }
     data.sort((a: any, b: any) => (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0));
     const mapped = data.map(mapSupabaseProduct);
     const seenIds = new Set<string>();
@@ -272,7 +279,8 @@ async function getSupabaseProducts(): Promise<any[]> {
       seenIds.add(uniqueId);
       return { ...prod, id: uniqueId };
     });
-  } catch {
+  } catch (error) {
+    console.error("Supabase products request failed:", error);
     return [];
   }
 }
@@ -333,7 +341,19 @@ Settlement Method: ${order.paymentMethod || "Cash on Delivery"}`;
 
 // API Routes
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", businessName: "Babay Dee Atta Chakki" });
+  res.json({
+    status: "ok",
+    businessName: "Babay Dee Atta Chakki",
+    integrations: {
+      supabase: Boolean(dbClient),
+      geoapifyGeocoding: Boolean(GEOAPIFY_GEOCODING_KEY),
+      geoapifyRouting: Boolean(GEOAPIFY_ROUTING_KEY),
+      ntfy: Boolean(process.env.NTFY_TOPIC?.trim()),
+      smspk: isSMSPKConfigured(),
+      twilio: isTwilioConfigured(),
+      email: isEmailServiceConfigured().configured
+    }
+  });
 });
 
 app.get("/api/categories", (req, res) => {
@@ -342,6 +362,9 @@ app.get("/api/categories", (req, res) => {
 
 app.get("/api/products", async (req, res) => {
   try {
+    if (!dbClient) {
+      return res.status(503).json({ error: "Product database is not configured." });
+    }
     const { category, search, sort } = req.query;
     let products = await getSupabaseProducts();
 

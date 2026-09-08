@@ -567,9 +567,12 @@ export default function App() {
           const timeoutId = setTimeout(() => controller.abort(), 3500);
           const res = await fetch(url, { signal: controller.signal });
           clearTimeout(timeoutId);
-          if (res.ok) {
-            return await res.json();
+          const contentType = res.headers.get("content-type") || "";
+          if (!res.ok || !contentType.includes("application/json")) {
+            console.warn(`API request failed for ${url}: ${res.status} ${contentType}`);
+            return null;
           }
+          return await res.json();
         } catch (e) {
           console.warn(`Resilient recovery: fetch failed or timed out for ${url}`, e);
         }
@@ -624,9 +627,9 @@ export default function App() {
       const fetchSafe = async (url: string) => {
         try {
           const res = await fetch(url);
-          if (res.ok) {
+            const contentType = res.headers.get("content-type") || "";
+            if (!res.ok || !contentType.includes("application/json")) return null;
             return await res.json();
-          }
         } catch (e) {
           // Silent recovery in background
         }

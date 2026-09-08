@@ -160,6 +160,13 @@ function EmailReceiptCard({ order }: { order: Order }) {
 
   const [showInput, setShowInput] = useState(!order.emailStatus?.delivered);
 
+  const getReceiptUrl = (download = false) => {
+    const isLocalDevelopment = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+    const origin = isLocalDevelopment ? window.location.origin : "https://babaydeeattachakki.com";
+    const suffix = download ? "?download=1" : "";
+    return `${origin}/api/order/${encodeURIComponent(order.id)}/receipt-html${suffix}`;
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = emailInput.trim();
@@ -208,19 +215,32 @@ function EmailReceiptCard({ order }: { order: Order }) {
   };
 
   const handleOpenWebReceipt = () => {
-    const win = window.open(`/api/order/${order.id}/receipt-html`, "_blank");
+    const win = window.open(getReceiptUrl(), "_blank", "noopener,noreferrer");
     if (!win) {
-      window.location.href = `/api/order/${order.id}/receipt-html`;
+      window.location.href = getReceiptUrl();
     }
   };
 
-  const handleDownloadReceipt = () => {
-    const link = document.createElement("a");
-    link.href = `/api/order/${order.id}/receipt-html?download=1`;
-    link.download = `BabayDee_Invoice_${order.id}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadReceipt = async () => {
+    try {
+      const response = await fetch(getReceiptUrl(true));
+      if (!response.ok) {
+        throw new Error(`Receipt request failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const link = document.createElement("a");
+      const objectUrl = URL.createObjectURL(blob);
+      link.href = objectUrl;
+      link.download = `BabayDee_Invoice_${order.id}.html`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (error) {
+      console.error("Unable to download receipt", error);
+      window.open(getReceiptUrl(), "_blank", "noopener,noreferrer");
+    }
   };
 
   return (

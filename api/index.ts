@@ -1683,7 +1683,7 @@ app.get("/api/order/:id/receipt-html", async (req, res) => {
       };
     }
 
-    const appUrl = "https://babaydeeattachakki.com/?tab=tracker";
+    const appUrl = process.env.APP_URL || "https://babaydeeattachakki.com";
     const html = generateOrderReceiptHtml(order, appUrl);
 
     if (req.query.download === "1" || req.query.download === "true") {

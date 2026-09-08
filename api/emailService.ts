@@ -509,7 +509,7 @@ export async function sendOrderConfirmationEmail(
 
   const orderId = order.id || "BDEC-ORDER";
   const subject = `🌾 Order Receipt #${orderId} - Babay Dee Atta Chakki`;
-  const appUrl = process.env.APP_URL || "";
+  const appUrl = process.env.APP_URL || "https://babaydeeattachakki.com";
   const htmlContent = generateOrderReceiptHtml(order, appUrl);
   const textContent = generateOrderReceiptPlainText(order);
 

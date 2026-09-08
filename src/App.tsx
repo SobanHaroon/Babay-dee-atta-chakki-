@@ -347,7 +347,7 @@ export default function App() {
   const [checkoutFormData, setCheckoutFormData] = useState(() => ({
     name: typeof window !== "undefined" ? localStorage.getItem("customer_name") || "" : "",
     phone: typeof window !== "undefined" ? localStorage.getItem("customer_phone") || "" : "",
-    email: typeof window !== "undefined" ? localStorage.getItem("customer_email") || "karpeter09@gmail.com" : "karpeter09@gmail.com",
+    email: typeof window !== "undefined" ? localStorage.getItem("customer_email") || "" : "",
     address: "",
     confirmCompleteAddress: "",
     city: "Rawalpindi",

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Sitemap Location for Googlebot & Bingbot Search Engine Indexing
+Sitemap: https://babaydeeattachakki.com/sitemap.xml

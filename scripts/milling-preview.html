@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Babay Dee — milling scene preview</title>
+  <style>
+    * { box-sizing: border-box; } body { margin: 0; background: #d9cbb5; font: 14px system-ui; }
+    canvas { width: 100vw; height: 100vh; display: block; }
+    label { position: fixed; left: 24px; right: 24px; bottom: 24px; padding: 16px 24px; border-radius: 16px; background: #fff8; backdrop-filter: blur(12px); display: flex; gap: 24px; align-items: center; }
+    input { flex: 1; accent-color: #294d3a; } output { width: 80px; }
+  </style>
+</head>
+<body>
+  <canvas aria-label="Wheat to store shelf cinematic scene"></canvas>
+  <label>Grain to shelf <input aria-label="Journey progress" type="range" min="0" max="1" value="0" step="0.001" /><output>Wheat</output></label>
+  <script type="module">
+    import { createMillingScene } from '/src/lib/millingScene.ts';
+    import { millingStage } from '/src/lib/millingProgress.ts';
+    const canvas = document.querySelector('canvas');
+    const scene = createMillingScene(canvas);
+    const slider = document.querySelector('input');
+    const render = () => { scene.resize(innerWidth, innerHeight); scene.render(Number(slider.value)); document.querySelector('output').value = millingStage(Number(slider.value)); };
+    slider.addEventListener('input', render);
+    addEventListener('resize', render);
+    render();
+    // Development-only capture surface; this page is not included in the Vite build.
+    window.captureMillingFrame = (progress) => { slider.value = progress; render(); return canvas.toDataURL('image/png'); };
+  </script>
+</body>
+</html>

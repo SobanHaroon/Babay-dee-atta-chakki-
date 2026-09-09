@@ -35,8 +35,8 @@ export function MobileBottomNav({
           }}
           className={`flex flex-col items-center justify-center h-full min-h-[48px] rounded-xl transition-all cursor-pointer ${
             activeTab === "home"
-              ? "text-[#3b4414] font-extrabold"
-              : "text-slate-500 font-medium hover:text-[#3b4414]"
+              ? "text-blue-700 font-extrabold bg-blue-50/80"
+              : "text-slate-500 font-medium hover:text-blue-700"
           }`}
         >
           <Home className="w-5 h-5" />
@@ -53,8 +53,8 @@ export function MobileBottomNav({
           }}
           className={`flex flex-col items-center justify-center h-full min-h-[48px] rounded-xl transition-all cursor-pointer ${
             activeTab === "shop"
-              ? "text-[#3b4414] font-extrabold"
-              : "text-slate-500 font-medium hover:text-[#3b4414]"
+              ? "text-blue-700 font-extrabold bg-blue-50/80"
+              : "text-slate-500 font-medium hover:text-blue-700"
           }`}
         >
           <Store className="w-5 h-5" />
@@ -91,7 +91,7 @@ export function MobileBottomNav({
             triggerHapticFeedback(25);
             onOpenCart();
           }}
-          className="flex flex-col items-center justify-center h-full min-h-[48px] rounded-xl text-[#3b4414] font-bold relative cursor-pointer"
+          className="flex flex-col items-center justify-center h-full min-h-[48px] rounded-xl text-blue-700 font-bold relative cursor-pointer"
         >
           <div className="relative flex items-center justify-center">
             <motion.div

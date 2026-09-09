@@ -64,6 +64,9 @@ import CheckoutMultiStepForm from "./components/CheckoutMultiStepForm";
 import { buildOrbitalItems, OrbitalSpec } from "./lib/orbitalHelper";
 
 import { SocialsHoverCard } from "./components/SocialsHoverCard";
+import { ScrollMillingStory } from "./components/ScrollMillingStory";
+import { MillingBackground } from "./components/MillingBackground";
+import { HeroSlideshow } from "./components/HeroSlideshow";
 
 // Lazy-loaded heavy components for optimal mobile Lighthouse performance
 const FlourSack3D = React.lazy(() => import("./components/FlourSack3D"));
@@ -164,57 +167,6 @@ const pageTransitionVariants = {
     }
   }
 };
-
-function HeroInfiniteSlideshow({ images }: { images: string[] }) {
-  const [slideshowIndex, setSlideshowIndex] = useState(0);
-
-  useEffect(() => {
-    if (!images || images.length === 0) return;
-    const interval = setInterval(() => {
-      setSlideshowIndex((prev) => (prev + 1) % images.length);
-    }, 4500);
-    return () => clearInterval(interval);
-  }, [images]);
-
-  if (!images || images.length === 0) return null;
-
-  return (
-    <div className="absolute inset-0 z-0 select-none pointer-events-none overflow-hidden">
-      {images.map((img, idx) => (
-        <div
-          key={idx}
-          className={cn(
-            "absolute inset-0 transition-opacity duration-1000 ease-in-out",
-            idx === slideshowIndex ? "opacity-100 z-1" : "opacity-0 z-0 pointer-events-none"
-          )}
-        >
-          <img
-            src={img}
-            alt={`Babay Dee Atta Chakki Organic Flour Mill Grain ${idx + 1}`}
-            width="1280"
-            height="720"
-            loading={idx === 0 ? "eager" : "lazy"}
-            // @ts-ignore
-            fetchPriority={idx === 0 ? "high" : "low"}
-            decoding="async"
-            referrerPolicy="no-referrer"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              if (!target.src.includes("logo%20coloured.jpg")) {
-                target.src = "/logo%20coloured.jpg";
-              }
-            }}
-            className="absolute inset-0 w-full h-full object-cover object-center transform-gpu scale-105 transition-transform duration-7000 ease-out"
-          />
-          {/* Rich organic fallback gradient backdrop in case image fails or loads slowly */}
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-950/70 via-slate-900 to-slate-950 -z-10" />
-        </div>
-      ))}
-      {/* Clean dark soft overlay ensuring high contrast and pristine legibility */}
-      <div className="absolute inset-0 bg-slate-950/50 z-10" />
-    </div>
-  );
-}
 
 export default function App() {
   const toast = useToast();
@@ -347,7 +299,7 @@ export default function App() {
   const [checkoutFormData, setCheckoutFormData] = useState(() => ({
     name: typeof window !== "undefined" ? localStorage.getItem("customer_name") || "" : "",
     phone: typeof window !== "undefined" ? localStorage.getItem("customer_phone") || "" : "",
-    email: typeof window !== "undefined" ? localStorage.getItem("customer_email") || "karpeter09@gmail.com" : "karpeter09@gmail.com",
+    email: typeof window !== "undefined" ? localStorage.getItem("customer_email") || "" : "",
     address: "",
     confirmCompleteAddress: "",
     city: "Rawalpindi",
@@ -1245,7 +1197,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-between font-sans relative select-none pb-16 md:pb-0">
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-between font-sans relative pb-16 md:pb-0">
       
       {/* 1. Custom Ripple & Pointer follow Highlights (Desktop Only) */}
       {isDesktop && (
@@ -1477,7 +1429,8 @@ export default function App() {
       </header>
 
       {/* Main Container Stage */}
-      <main className="flex-1 overflow-hidden">
+      <main className="milling-main flex-1 overflow-hidden">
+        {activeTab === "home" && !checkoutActive && !createdOrder && <MillingBackground />}
         <React.Suspense fallback={<div className="min-h-[300px] flex items-center justify-center"><Loader2 className="w-8 h-8 text-amber-600 animate-spin" /></div>}>
           <AnimatePresence mode="wait">
           {createdOrder ? (
@@ -1542,8 +1495,8 @@ export default function App() {
             {/* HERO SECTION WITH THREEJS BACKGROUND AND SACK */}
             <section className="relative w-full h-[620px] max-md:h-auto max-md:py-16 bg-slate-950 overflow-hidden flex items-center">
               
-              {/* Slideshow background (Full-bleed hardware-accelerated CSS transition with continuous infinite right-to-left loop) */}
-              <HeroInfiniteSlideshow images={heroImages} />
+              {/* Local photographs with soft crossfades and slow camera motion. */}
+              <HeroSlideshow images={heroImages} />
 
               <div className="max-w-7xl mx-auto px-4 w-full relative z-20">
                 {/* Left Text Column - Transparent text written directly over the images */}
@@ -1641,6 +1594,9 @@ export default function App() {
                 </div>
               </AnimeScrollReveal>
             </section>
+
+            {/* SCROLL-DRIVEN GRAIN TO DOORSTEP STORY */}
+            <ScrollMillingStory />
 
             {/* WHY CHOOSE US (Sourced brand values) */}
             <React.Suspense fallback={<div className="h-64 w-full bg-slate-100 rounded-2xl animate-pulse my-8 max-w-7xl mx-auto" />}>
@@ -2553,7 +2509,7 @@ export default function App() {
       )}
 
       {/* 7. Footer brand content details */}
-      <footer className="bg-slate-900 text-white font-sans border-t-4 border-amber-500 py-12">
+      <footer className="relative z-10 bg-slate-900 text-white font-sans border-t-4 border-amber-500 py-12">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 items-start">
           
           {/* Logo description column (3.5 cols) */}

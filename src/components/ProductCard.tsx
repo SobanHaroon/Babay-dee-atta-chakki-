@@ -476,7 +476,7 @@ export function ProductCard({
             className={cn(
               "add-to-basket-btn w-full mt-3 py-3 px-3.5 justify-between text-xs font-black uppercase rounded-xl tracking-wider transition-all duration-200 cursor-pointer shadow-sm active:scale-98",
               isHovered 
-                ? "bg-[#3b4414] text-white hover:bg-[#2f3513]" 
+                ? "bg-blue-700 text-white hover:bg-blue-800"
                 : "bg-slate-900 hover:bg-slate-800 text-white"
             )}
             style={{ transformOrigin: "center center" }}

@@ -102,16 +102,37 @@
   opacity: 1;
 }
 
+/* Keep the original palette, with a light veil behind the glass panels. */
 .milling-background-wash {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgb(248 250 252 / 22%), rgb(248 250 252 / 80%) 32%, rgb(248 250 252 / 80%) 68%, rgb(248 250 252 / 22%));
+  background: rgb(248 250 252 / 20%);
 }
 
-@media (max-width: 767px) {
-  .milling-background-wash {
-    background: rgb(248 250 252 / 65%);
-  }
+.cinematic-home .cinematic-glass {
+  background: rgb(255 255 255 / 80%);
+  border-color: rgb(226 232 240 / 65%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 8px 28px rgb(15 23 42 / 7%), inset 0 1px 0 rgb(255 255 255 / 50%);
+}
+
+.cinematic-home .cinematic-glass-stone {
+  background: linear-gradient(to bottom, rgb(250 250 249 / 75%), rgb(245 245 244 / 75%));
+}
+
+.cinematic-home .cinematic-glass-dark {
+  background: linear-gradient(to bottom, rgb(28 25 23 / 78%), rgb(15 23 42 / 78%), rgb(2 6 23 / 80%));
+  border-color: rgb(245 158 11 / 20%);
+  box-shadow: 0 8px 28px rgb(2 6 23 / 12%), inset 0 1px 0 rgb(255 255 255 / 6%);
+}
+
+.cinematic-home .cinematic-glass-warm {
+  background: linear-gradient(to bottom, rgb(15 23 42 / 78%), rgb(69 26 3 / 70%), rgb(2 6 23 / 80%));
+}
+
+.cinematic-home #customer-reviews-section {
+  background: rgb(248 250 252 / 35%);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -584,4 +605,8 @@ link[rel="apple-touch-icon"] {
     flex: 0 0 50% !important;
     max-width: 50% !important;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-basket-bounce, .animate-basket-pulse { animation: none; }
 }

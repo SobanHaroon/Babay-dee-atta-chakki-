@@ -1,9 +1,9 @@
 import "dotenv/config";
 import express from "express";
 import { createClient } from "@supabase/supabase-js";
-import { INITIAL_DELIVERY_AREAS, calculateDeliveryCharge, findDeliveryArea, DeliveryAreaRecord } from "../src/deliveryData";
-import { extractCityAndArea, findClosestTwinCityZone, formatGeoapifyAddress } from "../src/lib/mapUtils";
-import { sendOrderConfirmationSMS, sendOrderStatusSMS, isSMSGatewayConfigured, isSMSPKConfigured, isTwilioConfigured } from "./smsService";
+import { INITIAL_DELIVERY_AREAS, calculateDeliveryCharge, findDeliveryArea, DeliveryAreaRecord } from "../src/deliveryData.js";
+import { extractCityAndArea, findClosestTwinCityZone, formatGeoapifyAddress } from "../src/lib/mapUtils.js";
+import { sendOrderConfirmationSMS, sendOrderStatusSMS, isSMSGatewayConfigured, isSMSPKConfigured, isTwilioConfigured } from "./smsService.js";
 import {
   sendOrderConfirmationEmail,
   sendTestEmail,
@@ -11,7 +11,7 @@ import {
   generateOrderReceiptPlainText,
   isEmailServiceConfigured,
   EMAIL_RECEIPT_LOGS
-} from "./emailService";
+} from "./emailService.js";
 
 const app = express();
 
@@ -31,7 +31,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Initialize Supabase Client
 const dbUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://dlinknypnlmcrhgbediu.supabase.co";
-const dbKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_KkOjGDoE3yq7tKIKzIfajg_sIoyPlUT";
+const dbKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_KkOjGDoE3yq7tKIKzIfajg_sIoyPlUT";
 const dbClient = createClient(dbUrl, dbKey);
 
 // Dynamic delivery areas store initialized with 299 baseline records
@@ -1319,13 +1319,16 @@ app.post("/api/checkout", async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    ACTIVE_ORDERS.push(newOrder);
+    let orderPersisted = false;
 
     // Save order data dynamically to the connected Supabase orders database if available
     if (dbClient) {
       try {
         const serializedMetadata = {
-          address,
+          address: newOrder.customer.address,
+          fulfillmentType: newOrder.fulfillmentType,
+          city: validCity,
+          deliveryDetails: newOrder.deliveryDetails,
           area: validArea,
           email: email ? String(email).trim() : undefined,
           paymentMethod: paymentMethod || "Cash on Delivery",
@@ -1344,17 +1347,17 @@ app.post("/api/checkout", async (req, res) => {
             id: item.id,
             name: item.name,
             price: item.price,
-            quantity: item.quantity
+            quantity: item.quantity,
+            unit: item.unit
           }))
         };
-        const customerAddressValue = `${address} | METADATA:${JSON.stringify(serializedMetadata)}`;
+        const customerAddressValue = `${newOrder.customer.address} | METADATA:${JSON.stringify(serializedMetadata)}`;
         
         const now = new Date();
         const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
         const timeStr = now.toTimeString().split(" ")[0]; // HH:MM:SS
 
         const rawInsertPayload: Record<string, any> = {
-          id: Math.floor(Date.now() / 1000) + Math.floor(Math.random() * 1000),
           created_at: now.toISOString(),
           "order id": numericId,
           "customer name": name,
@@ -1391,18 +1394,18 @@ app.post("/api/checkout", async (req, res) => {
 
         // Adaptive insert: gracefully strips any unsupported schema columns if not yet created on Supabase
         let insertPayload = { ...rawInsertPayload };
-        let insertedSuccessfully = false;
+        const maxAttempts = Object.keys(insertPayload).length + 1;
 
-        for (let attempt = 0; attempt < 20; attempt++) {
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
           const { error } = await dbClient.from("orders").insert([insertPayload]);
           if (!error) {
             console.log(`Successfully wrote order BDEC-${numericId} to Supabase orders table! Inserted fields:`, Object.keys(insertPayload));
-            insertedSuccessfully = true;
+            orderPersisted = true;
             break;
           }
 
           const match = error.message.match(/Could not find the '([^']+)' column/i);
-          if (match && match[1]) {
+          if (match && match[1] in insertPayload && !["order id", "customer name", "contact number", "customer address", "Price"].includes(match[1])) {
             delete insertPayload[match[1]];
           } else {
             console.error("Supabase insert error:", error);
@@ -1413,6 +1416,11 @@ app.post("/api/checkout", async (req, res) => {
         console.error("Exception writing order to Supabase:", err);
       }
     }
+
+    if (!orderPersisted) {
+      return res.status(503).json({ success: false, error: "Your order could not be saved. Your basket has been kept. Please try again shortly." });
+    }
+    ACTIVE_ORDERS.push(newOrder);
 
     // Await order notification dispatch (Ntfy push & Twilio SMS confirmation)
     try {
@@ -1548,19 +1556,22 @@ async function getOrderById(orderId: string): Promise<any | null> {
           }
           return {
             id: `BDEC-${row["order id"]}`,
+            fulfillmentType: metadata?.fulfillmentType || "delivery",
+            deliveryDetails: metadata?.deliveryDetails,
             customer: {
+              city: metadata?.city,
               name: row["customer name"] || "Valued Customer",
               phone: row["contact number"] || "",
               email: row["customer email"] || metadata?.email || undefined,
               address: customAddress,
               area: metadata?.area || "Rawalpindi"
             },
-            items: metadata?.items || [{ name: "Stone-Ground Atta (Kg)", price: 170, quantity: 10, unit: "kg" }],
+            items: metadata?.items || [],
             paymentMethod: metadata?.paymentMethod || "Cash on Delivery",
-            subtotal: metadata?.subtotal || (typeof row.Price === "number" ? row.Price : 1700),
+            subtotal: metadata?.subtotal ?? row["Order pricing"] ?? row.Price ?? 0,
             deliveryCharges: metadata?.deliveryCharges || (typeof row["Delivery charges"] === "number" ? row["Delivery charges"] : 0),
             discount: metadata?.discount || 0,
-            total: metadata?.total || (typeof row.Price === "number" ? row.Price : 1700),
+            total: metadata?.total ?? row.Price ?? 0,
             deliveryDate: metadata?.deliveryDate,
             deliverySlot: metadata?.deliverySlot,
             status: row["order status"] || "order placed",
@@ -1657,30 +1668,7 @@ app.get("/api/order/:id/receipt-html", async (req, res) => {
     let order = await getOrderById(orderId);
 
     if (!order) {
-      // Fallback placeholder order so preview is always viewable
-      order = {
-        id: orderId,
-        fulfillmentType: "delivery",
-        customer: {
-          name: "Valued Customer",
-          phone: "03215010846",
-          email: "customer@example.com",
-          address: "House 12, Street 5, Gulraiz Phase 3",
-          city: "Rawalpindi",
-          area: "Gulraiz Phase 3"
-        },
-        items: [
-          { name: "Desi Chakki Whole Wheat Atta", price: 170, quantity: 10, unit: "kg" },
-          { name: "Super Basmati Kainat 1121 Steam Rice", price: 420, quantity: 2, unit: "kg" }
-        ],
-        paymentMethod: "Cash on Delivery",
-        subtotal: 2540,
-        deliveryCharges: 150,
-        total: 2690,
-        deliverySlot: "Express Same-Day",
-        status: "Order Placed",
-        createdAt: new Date().toISOString()
-      };
+      return res.status(404).send("Order not found. Please check your order number.");
     }
 
     const appUrl = "https://babaydeeattachakki.com/?tab=tracker";

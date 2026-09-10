@@ -103,7 +103,7 @@ export function ReviewsSection({ reviews, onAddReview, isLoading }: ReviewsSecti
   };
 
   return (
-    <section id="customer-reviews-section" className="py-12 bg-slate-50 border-y border-slate-100">
+    <section data-cinematic-section id="customer-reviews-section" className="cinematic-surface py-12 bg-slate-50 border-y border-slate-100">
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="text-center max-w-xl mx-auto mb-10">
@@ -120,14 +120,14 @@ export function ReviewsSection({ reviews, onAddReview, isLoading }: ReviewsSecti
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Column: Form to submit review (5 cols) */}
-          <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+          <div className="cinematic-surface cinematic-glass lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
             <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-1.5">
               <MessageSquarePlus className="w-4.5 h-4.5 text-blue-600" />
               <span>Share Your Feedback</span>
             </h3>
 
             {showSuccess ? (
-              <div className="bg-green-50 border border-green-150 p-4 rounded-xl text-center space-y-2 animate-fade-in">
+              <div className="cinematic-surface bg-green-50 border border-green-150 p-4 rounded-xl text-center space-y-2 animate-fade-in">
                 <CheckCircle className="w-8 h-8 text-green-600 mx-auto" />
                 <h4 className="font-bold text-green-800 text-sm">Review Submitted!</h4>
                 <p className="text-xs text-green-600 leading-normal">
@@ -237,13 +237,13 @@ export function ReviewsSection({ reviews, onAddReview, isLoading }: ReviewsSecti
                 <AnimeHover3D key={rev.id}>
                   <div
                     id={`review-item-${rev.id}`}
-                    className="p-4 bg-white rounded-xl border border-slate-100 hover:border-slate-200 shadow-xs hover:shadow-sm transition-all"
+                    className="cinematic-surface cinematic-glass p-4 bg-white rounded-xl border border-slate-100 hover:border-slate-200 shadow-xs hover:shadow-sm transition-all"
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <h4 className="font-sans font-bold text-slate-800 text-sm flex items-center gap-1.5">
                           <span>{rev.name}</span>
-                          <span className="inline-flex items-center gap-0.5 bg-blue-50 text-blue-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                          <span className="cinematic-surface inline-flex items-center gap-0.5 bg-blue-50 text-blue-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full">
                             <UserCheck className="w-2.5 h-2.5" /> Verified
                           </span>
                         </h4>

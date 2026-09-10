@@ -68,7 +68,7 @@ export function WhyChooseUs() {
   ];
 
   return (
-    <section className="max-w-7xl mx-auto px-4 py-8">
+    <section data-cinematic-section className="max-w-7xl mx-auto px-4 py-8">
       {/* Header and Subheader with Scroll Animation */}
       <motion.div 
         initial={{ opacity: 0, y: 25 }}
@@ -77,7 +77,7 @@ export function WhyChooseUs() {
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         className="text-center max-w-xl mx-auto mb-12 space-y-2"
       >
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 border border-blue-100 text-blue-700 rounded-full">
+        <div className="cinematic-surface inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 border border-blue-100 text-blue-700 rounded-full">
           <Sparkles className="w-3.5 h-3.5 text-amber-500" />
           <span className="text-[10px] font-mono font-bold uppercase tracking-widest">
             A Legacy of Absolute Purity
@@ -128,7 +128,7 @@ export function WhyChooseUs() {
                 <motion.div
                   initial="initial"
                   whileHover="hover"
-                  className="group relative p-6 bg-white rounded-2xl border border-slate-100 hover:border-slate-200/80 shadow-2xs hover:shadow-lg transition-all duration-300 flex flex-col justify-between text-center overflow-hidden h-full"
+                  className="cinematic-surface cinematic-glass group relative p-6 bg-white rounded-2xl border border-slate-100 hover:border-slate-200/80 shadow-2xs hover:shadow-lg transition-all duration-300 flex flex-col justify-between text-center overflow-hidden h-full"
                 >
                   {/* Top Decorative bar */}
                   <div className={cn("absolute top-0 left-0 right-0 h-1 transition-all duration-300 opacity-0 group-hover:opacity-100", benefit.accentBg)} />
@@ -136,11 +136,11 @@ export function WhyChooseUs() {
                   {/* Icon Container with subtle background shape */}
                   <div className="flex justify-center mb-5">
                     <div className={cn(
-                      "relative w-14 h-14 rounded-2xl bg-gradient-to-br border flex items-center justify-center shadow-2xs transition-all duration-300 group-hover:scale-105",
+                      "cinematic-surface relative w-14 h-14 rounded-2xl bg-gradient-to-br border flex items-center justify-center shadow-2xs transition-all duration-300 group-hover:scale-105",
                       benefit.colorClass
                     )}>
                       {/* Subtle pulsing glow background */}
-                      <span className="absolute inset-0 rounded-2xl bg-current opacity-0 group-hover:opacity-5 animate-ping duration-1000" />
+                      <span className="cinematic-surface absolute inset-0 rounded-2xl bg-current opacity-0 group-hover:opacity-5 animate-ping duration-1000" />
 
                       {/* Animated Icon */}
                       <motion.div variants={benefit.iconVariants}>

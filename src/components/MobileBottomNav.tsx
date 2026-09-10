@@ -1,6 +1,6 @@
 import React from "react";
 import { Home, Store, Heart, ShoppingBag } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { triggerHapticFeedback } from "../lib/utils";
 
 interface MobileBottomNavProps {
@@ -22,6 +22,7 @@ export function MobileBottomNav({
   onOpenWishlist,
   bounceTrigger = 0,
 }: MobileBottomNavProps) {
+  const reducedMotion = useReducedMotion();
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-2 sm:hidden shadow-lg h-16 flex items-center pb-safe">
       <div className="grid grid-cols-4 gap-1 items-center w-full max-w-md mx-auto text-center h-full">
@@ -97,7 +98,7 @@ export function MobileBottomNav({
             <motion.div
               key={`mobile-bottom-bounce-${bounceTrigger}`}
               animate={
-                bounceTrigger > 0
+                bounceTrigger > 0 && !reducedMotion
                   ? {
                       y: [0, -7, 2, -3, 1, 0],
                       scale: [1, 1.28, 0.94, 1.12, 0.98, 1],
@@ -116,7 +117,7 @@ export function MobileBottomNav({
             {cartCount > 0 && (
               <motion.span
                 key={`mobile-cart-badge-${bounceTrigger}`}
-                animate={bounceTrigger > 0 ? { scale: [1, 1.35, 1] } : {}}
+                animate={bounceTrigger > 0 && !reducedMotion ? { scale: [1, 1.35, 1] } : {}}
                 transition={{ duration: 0.45, ease: "easeOut" }}
                 className="absolute -top-1 -right-2 bg-amber-500 text-slate-950 text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-2xs"
               >

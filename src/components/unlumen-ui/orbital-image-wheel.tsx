@@ -131,8 +131,8 @@ export function OrbitalImageWheel({
       )}
     >
       {/* Background Decorative Radial Glows */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-[#3b4414]/15 rounded-full blur-2xl pointer-events-none" />
+      <div className="cinematic-decoration absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="cinematic-decoration absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-[#3b4414]/15 rounded-full blur-2xl pointer-events-none" />
 
       {/* Section Header */}
       {title && (
@@ -152,7 +152,7 @@ export function OrbitalImageWheel({
       <div className="relative w-full max-w-[340px] sm:max-w-xl md:max-w-2xl lg:max-w-4xl aspect-square max-h-[350px] sm:max-h-[480px] md:max-h-[580px] lg:max-h-[660px] flex items-center justify-center">
         
         {/* Logo Watermark Orbit Backdrop Image (Orbiter rotates on top of this image) */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+        <div className="cinematic-decoration absolute inset-0 flex items-center justify-center pointer-events-none z-0">
           <div className="relative w-44 h-44 sm:w-72 sm:h-72 md:w-96 md:h-96 lg:w-[480px] lg:h-[480px] rounded-full overflow-hidden opacity-30 sm:opacity-25 flex items-center justify-center p-4 bg-gradient-to-b from-amber-500/10 via-slate-900/40 to-slate-950/70 border border-amber-400/20 shadow-2xl">
             <img
               src="/logo%20coloured.jpg"
@@ -226,7 +226,7 @@ export function OrbitalImageWheel({
         </div>
 
         {/* Center Stage Card Display */}
-        <div className="relative z-30 w-52 sm:w-64 md:w-72 p-3.5 sm:p-5 lg:p-6 bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-amber-200/80 shadow-2xl flex flex-col items-center text-center space-y-2 sm:space-y-3.5 transition-all duration-300 hover:shadow-amber-500/10">
+        <div className="cinematic-surface cinematic-glass relative z-30 w-52 sm:w-64 md:w-72 p-3.5 sm:p-5 lg:p-6 bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-amber-200/80 shadow-2xl flex flex-col items-center text-center space-y-2 sm:space-y-3.5 transition-all duration-300 hover:shadow-amber-500/10">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeIndex}
@@ -239,7 +239,7 @@ export function OrbitalImageWheel({
               {/* Product Thumbnail / Image */}
               <div 
                 onClick={() => onViewDetails?.(activeItem)}
-                className="relative w-20 h-20 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-50 via-slate-50 to-stone-100 border border-slate-200/80 p-1.5 sm:p-2 shadow-inner flex items-center justify-center overflow-hidden cursor-pointer hover:border-amber-400 transition-colors"
+                className="cinematic-surface relative w-20 h-20 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-50 via-slate-50 to-stone-100 border border-slate-200/80 p-1.5 sm:p-2 shadow-inner flex items-center justify-center overflow-hidden cursor-pointer hover:border-amber-400 transition-colors"
               >
                 {activeItem.src ? (
                   <img
@@ -285,7 +285,7 @@ export function OrbitalImageWheel({
               {activeItem.price && (
                 <div 
                   onClick={() => onViewDetails?.(activeItem)}
-                  className="text-xs sm:text-sm font-black text-[#3b4414] bg-amber-100/80 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full border border-amber-300/60 cursor-pointer"
+                  className="cinematic-surface text-xs sm:text-sm font-black text-[#3b4414] bg-amber-100/80 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full border border-amber-300/60 cursor-pointer"
                 >
                   {typeof activeItem.price === "number"
                     ? `Rs. ${activeItem.price.toLocaleString()}`

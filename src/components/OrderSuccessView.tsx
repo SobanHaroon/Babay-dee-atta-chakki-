@@ -1,3 +1,4 @@
+import { openOrderReceipt, downloadOrderReceipt } from "../lib/orderReceipt";
 import React, { useState, useEffect } from "react";
 import { CheckCircle2, Copy, Check, ShoppingBag, Truck, MapPin, Phone, Calendar, Bell, ExternalLink, ShieldCheck, Printer, Download, RotateCcw, Star, Users, Clock, Sparkles, TrendingUp, Smartphone, MessageSquare, Mail, Send, Loader2, AlertCircle, Info, FileText } from "lucide-react";
 import { Order } from "../types";
@@ -207,21 +208,8 @@ function EmailReceiptCard({ order }: { order: Order }) {
     }
   };
 
-  const handleOpenWebReceipt = () => {
-    const win = window.open(`/api/order/${order.id}/receipt-html`, "_blank");
-    if (!win) {
-      window.location.href = `/api/order/${order.id}/receipt-html`;
-    }
-  };
-
-  const handleDownloadReceipt = () => {
-    const link = document.createElement("a");
-    link.href = `/api/order/${order.id}/receipt-html?download=1`;
-    link.download = `BabayDee_Invoice_${order.id}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const handleOpenWebReceipt = () => openOrderReceipt(order);
+  const handleDownloadReceipt = () => downloadOrderReceipt(order);
 
   return (
     <div className="bg-gradient-to-br from-blue-50/70 via-indigo-50/30 to-amber-50/40 border border-blue-200/80 rounded-2xl p-5 md:p-6 space-y-4 shadow-xs">
@@ -567,63 +555,7 @@ export function OrderSuccessView({ order, onClose, onTrack, onReorder }: OrderSu
     }, 500);
   };
 
-  const handleDownloadReceipt = () => {
-    // Formulate a beautiful store receipt layout
-    const divider = "========================================\n";
-    const thinDivider = "----------------------------------------\n";
-    
-    let text = "";
-    text += "            BABAY DEE CHAKKI            \n";
-    text += "     Premium Stone-Ground & Herbs       \n";
-    text += "       Gulrez Phase 3, Rawalpindi       \n";
-    text += divider;
-    text += `ORDER ID  : ${order.id}\n`;
-    text += `DATE      : ${formattedDate}\n`;
-    text += divider;
-    text += "CUSTOMER DETAILS:\n";
-    text += `Name      : ${order.customer.name}\n`;
-    text += `Contact   : ${order.customer.phone}\n`;
-    text += `Address   : ${order.customer.address}\n`;
-    text += `Area      : ${order.customer.area}\n`;
-    text += `Payment   : ${order.paymentMethod}\n`;
-    if (order.deliveryDate) {
-      text += `Delivery  : ${order.deliveryDate} (${order.deliverySlot})\n`;
-    }
-    text += divider;
-    text += "ITEMS PURCHASED:\n";
-    text += thinDivider;
-    
-    order.items.forEach(it => {
-      const itemLine = `${it.name}\n`;
-      const priceLine = `  ${it.quantity} ${it.unit || "unit"} x Rs. ${it.price}`;
-      const totalLine = `Rs. ${it.price * it.quantity}`;
-      // Right-align totalLine relative to priceLine
-      const spacing = 40 - priceLine.length - totalLine.length;
-      const spaces = spacing > 0 ? " ".repeat(spacing) : " ";
-      text += itemLine + priceLine + spaces + totalLine + "\n";
-    });
-    
-    text += thinDivider;
-    text += `Subtotal                : Rs. ${order.subtotal}\n`;
-    text += `Delivery Charges        : Rs. ${order.deliveryCharges}\n`;
-    text += thinDivider;
-    text += `GRAND TOTAL             : Rs. ${order.total}\n`;
-    text += divider;
-    text += "    Thank you for sourcing from us!     \n";
-    text += "    Eat Fresh, Stay Organic & Healthy   \n";
-    text += "========================================\n";
-
-    // Trigger download
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `Receipt-Order-${order.id}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
+  const handleDownloadReceipt = () => downloadOrderReceipt(order);
 
   return (
     <div id="order-success-view-container" className="space-y-8 animate-fade-in max-w-2xl mx-auto">
@@ -825,7 +757,7 @@ export function OrderSuccessView({ order, onClose, onTrack, onReorder }: OrderSu
       {/* Return back home and Receipt Actions */}
       <div className="pt-2 flex flex-col sm:flex-row justify-center items-center gap-3">
         <button
-          onClick={() => window.open(`/api/order/${order.id}/receipt-html`, "_blank")}
+          onClick={() => openOrderReceipt(order)}
           className="w-full sm:w-auto px-5 py-3 min-h-[44px] bg-white border border-blue-200 hover:bg-blue-50/60 text-blue-800 font-bold text-xs rounded-xl tracking-wider uppercase transition-colors cursor-pointer inline-flex items-center gap-2 justify-center shadow-xs"
           title="Open formatted web receipt in a new tab"
         >

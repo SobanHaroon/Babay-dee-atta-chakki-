@@ -328,7 +328,7 @@ export function FlourSack3D() {
   }, [grindSpeed]);
 
   return (
-    <div className="relative w-full p-5 flex flex-col items-center bg-gradient-to-b from-stone-50 to-stone-100 border border-stone-200/60 rounded-3xl shadow-xl overflow-hidden group">
+    <div className="cinematic-surface cinematic-glass cinematic-glass-stone relative w-full p-5 flex flex-col items-center bg-gradient-to-b from-stone-50 to-stone-100 border border-stone-200/60 rounded-3xl shadow-xl overflow-hidden group">
       
       {/* Immersive Sound Toggle Header */}
       <div className="w-full flex items-center justify-between border-b border-stone-200/80 pb-3 mb-4 relative z-10">
@@ -373,7 +373,7 @@ export function FlourSack3D() {
       </div>
 
       {/* Main Grinding Visual Stage */}
-      <div className="relative w-full aspect-square max-w-[260px] flex items-center justify-center select-none bg-stone-100/50 rounded-2xl border border-stone-200/40 p-4 shadow-inner">
+      <div className="cinematic-surface relative w-full aspect-square max-w-[260px] flex items-center justify-center select-none bg-stone-100/50 rounded-2xl border border-stone-200/40 p-4 shadow-inner">
         
         {/* Particle Wheat Grain Feeder (top central chute representation) */}
         <div className="absolute top-0 z-20 flex flex-col items-center">
@@ -486,7 +486,7 @@ export function FlourSack3D() {
       </div>
 
       {/* Speed control dashboard panel */}
-      <div className="w-full mt-4 bg-white/70 rounded-2xl p-2.5 border border-stone-200/50 space-y-2 relative z-10">
+      <div className="cinematic-surface w-full mt-4 bg-white/70 rounded-2xl p-2.5 border border-stone-200/50 space-y-2 relative z-10">
         <div className="flex justify-between items-center text-[10px] px-1 font-bold text-stone-500">
           <span>Grinding Speed Controls</span>
           <span className="font-mono text-amber-700 font-black">
@@ -513,7 +513,7 @@ export function FlourSack3D() {
         </div>
 
         {/* Fun continuous output meter */}
-        <div className="flex justify-between items-center bg-stone-100/80 rounded-lg p-1.5 px-2 border border-stone-200/20 text-[9px]">
+        <div className="cinematic-surface flex justify-between items-center bg-stone-100/80 rounded-lg p-1.5 px-2 border border-stone-200/20 text-[9px]">
           <span className="text-stone-500 font-medium">Stone-Ground Output:</span>
           <span className="font-mono font-black text-amber-800 flex items-center gap-1">
             <Sparkles className="w-2.5 h-2.5 text-amber-500 animate-spin" />

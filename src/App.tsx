@@ -53,7 +53,7 @@ import { GsapMagnetic, GsapScrollReveal, GsapTopProgressBar, GsapCounter } from 
 import { Logo } from "./components/Logo";
 import { generateProductJsonLd, generateBreadcrumbJsonLd, injectJsonLdScript, removeJsonLdScript } from "./lib/jsonLd";
 import { fetchProductsFromSupabaseDirectly } from "./lib/supabaseProducts";
-import { insertOrderToSupabase, sendNtfyNotification, sendOrderConfirmationSMSClient } from "./lib/orderHelper";
+
 import { supabase } from "./lib/supabaseClient";
 import { motion, AnimatePresence } from "motion/react";
 import { animate } from "animejs";
@@ -271,7 +271,7 @@ export default function App() {
     }
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [pulseBasket, setPulseBasket] = useState(false);
+  const [cartBounce, setCartBounce] = useState(0);
   const [selectedArea, setSelectedArea] = useState("Islamabad"); // default delivery town, Rawalpindi alternative
   const [selectedSubLocation, setSelectedSubLocation] = useState<string>("Sector I-8 / I-9");
   const [customDistanceKm, setCustomDistanceKm] = useState<number>(12);
@@ -919,12 +919,7 @@ export default function App() {
 
     toast.wheat(`Added ${quantity} × ${p.name} to basket!`);
 
-    // Animate product adding interaction feedback physical react
-    setIsCartOpen(true);
-    setPulseBasket(true);
-    setTimeout(() => {
-      setPulseBasket(false);
-    }, 800);
+    setCartBounce(count => count + 1);
   };
 
   const handleUpdateCartQty = (id: string, quantity: number) => {
@@ -1097,77 +1092,10 @@ export default function App() {
         toast.error(errMsg);
       }
     } catch (err) {
-      console.error("Checkout submission error fallback:", err);
-      // Fail-safe client side order creation so customer orders process 100% reliably
-      const numericId = Math.floor(100000 + Math.random() * 900000);
-      const fallbackOrderId = "BDEC-" + numericId;
-      const subtotal = cartItems.reduce((acc, it) => acc + (it.price * it.quantity), 0);
-      const deliveryCharges = isPickupOrder
-        ? 0
-        : (verifiedDeliveryCharge !== null && verifiedDeliveryCharge !== undefined ? verifiedDeliveryCharge : Math.max(50, Math.round(dist * 50)));
-      const fallbackOrder = {
-        id: fallbackOrderId,
-        fulfillmentType,
-        customer: {
-          name: name.trim(),
-          phone: phone.trim(),
-          email: (email || "").trim() || undefined,
-          address: finalAddress,
-          confirmAddress: isPickupOrder ? "Store Depot Pickup" : (confirmCompleteAddress || address).trim(),
-          city: resolvedCity,
-          area: resolvedArea,
-          latitude: custLat,
-          longitude: custLng
-        },
-        deliveryDetails: {
-          city: resolvedCity,
-          area: resolvedArea,
-          distanceKm: dist,
-          deliveryCharge: deliveryCharges,
-          latitude: custLat,
-          longitude: custLng
-        },
-        items: [...cartItems],
-        paymentMethod: finalPaymentMethod,
-        subtotal,
-        deliveryCharges,
-        discount: 0,
-        total: subtotal + deliveryCharges,
-        deliveryDate: checkoutFormData.deliveryDate,
-        status: "order placed",
-        statusHistory: [
-          { status: "order placed", time: new Date().toLocaleTimeString(), detail: isPickupOrder ? "Pickup order received at Babay Dee store depot" : "Order successfully placed and recorded in database" }
-        ],
-        createdAt: new Date().toISOString()
-      };
-
-      // Direct client-side insert to Supabase & push to Ntfy & SMS & Email (handled gracefully in background)
-      const backgroundTasks = [
-        insertOrderToSupabase(fallbackOrder),
-        sendNtfyNotification(fallbackOrder),
-        sendOrderConfirmationSMSClient(fallbackOrder)
-      ];
-
-      if ((email || "").trim()) {
-        backgroundTasks.push(
-          fetch("/api/order/send-receipt", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ order: fallbackOrder, email: (email || "").trim() })
-          }).catch(() => ({} as any))
-        );
-      }
-
-      Promise.allSettled(backgroundTasks).catch(() => {});
-
-      setCreatedOrder(fallbackOrder);
-      setCartItems([]);
-      setCheckoutActive(false);
-      setShowPreCheckoutModal(false);
-      toast.success(isPickupOrder ? "Pickup Order Placed! Your fresh flour is being packed." : "Order placed successfully! Milling will begin shortly.");
-      if (typeof window !== "undefined") {
-        localStorage.setItem("last_tracking_id", fallbackOrderId);
-      }
+      console.error("Checkout submission failed:", err);
+      const message = "We could not confirm your order. Your basket has been kept. Please try again or contact the store if the problem continues.";
+      setCheckoutError(message);
+      toast.error(message);
     } finally {
       setIsPlacingOrder(false);
     }
@@ -1378,9 +1306,10 @@ export default function App() {
                 type="button"
                 onClick={() => setIsCartOpen(true)}
                 id="header-basket-btn"
+                key={`basket-${cartBounce}`}
                 aria-label="Open shopping basket"
                 className={`bg-slate-900 hover:bg-blue-600 text-white font-bold rounded-full px-3 py-1 sm:px-4 sm:py-1.5 flex items-center gap-2 shadow-xs transition-all active:scale-95 duration-200 cursor-pointer text-xs ${
-                  pulseBasket ? "animate-basket-pulse" : ""
+                  cartBounce > 0 ? "animate-basket-bounce" : ""
                 }`}
               >
                 <ShoppingBag className="w-4 h-4 text-amber-400" />
@@ -1474,11 +1403,7 @@ export default function App() {
                       detail: { type: "add-to-cart", x: window.innerWidth / 2, y: window.innerHeight / 2 }
                     })
                   );
-                  setIsCartOpen(true);
-                  setPulseBasket(true);
-                  setTimeout(() => {
-                    setPulseBasket(false);
-                  }, 800);
+                  setCartBounce(count => count + 1);
                   setCreatedOrder(null);
                 }}
               />
@@ -1490,7 +1415,7 @@ export default function App() {
               initial="initial"
               animate="animate"
               exit="exit"
-              className="space-y-16"
+              className="cinematic-home space-y-16"
             >
             {/* HERO SECTION WITH THREEJS BACKGROUND AND SACK */}
             <section className="relative w-full h-[620px] max-md:h-auto max-md:py-16 bg-slate-950 overflow-hidden flex items-center">
@@ -1552,16 +1477,16 @@ export default function App() {
             </section>
 
             {/* INTERACTIVE 3D STONE-MILL TECHNOLOGY */}
-            <section id="interactive-3d-mill" className="max-w-7xl mx-auto px-4 py-8 md:py-12">
+            <section data-cinematic-section id="interactive-3d-mill" className="max-w-7xl mx-auto px-4 py-8 md:py-12">
               <AnimeScrollReveal>
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 items-center bg-white border border-slate-100 rounded-3xl p-6 md:p-12 shadow-xs relative overflow-hidden">
+                <div className="cinematic-surface cinematic-glass grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 items-center bg-white border border-slate-100 rounded-3xl p-6 md:p-12 shadow-xs relative overflow-hidden">
                   
                   {/* Accent ambient glow */}
-                  <div className="absolute top-0 right-0 w-80 h-80 bg-blue-50 rounded-full blur-3xl opacity-60 pointer-events-none -mr-20 -mt-20 z-0" />
+                  <div className="cinematic-surface absolute top-0 right-0 w-80 h-80 bg-blue-50 rounded-full blur-3xl opacity-60 pointer-events-none -mr-20 -mt-20 z-0" />
                   
                   {/* Left Column: Descriptive Text */}
                   <div className="lg:col-span-7 space-y-6 relative z-10 text-left max-lg:text-center">
-                    <span className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 font-mono font-bold text-xs uppercase tracking-widest px-3 py-1 rounded-full border border-blue-100">
+                    <span className="cinematic-surface inline-flex items-center gap-2 bg-blue-50 text-blue-700 font-mono font-bold text-xs uppercase tracking-widest px-3 py-1 rounded-full border border-blue-100">
                       <Sparkles className="w-3.5 h-3.5 animate-pulse" />
                       <span>Traditional Stone-Mill Technology</span>
                     </span>
@@ -1576,7 +1501,7 @@ export default function App() {
                     </p>
                     
                     <div className="flex flex-wrap gap-4 pt-2 justify-start max-lg:justify-center">
-                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200/50">
+                      <div className="cinematic-surface flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200/50">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         <span>Web Audio Synth Active</span>
                       </div>
@@ -1586,7 +1511,7 @@ export default function App() {
                   {/* Right Column: 3D Mill Container */}
                   <div className="lg:col-span-5 flex justify-center items-center relative z-10 w-full">
                     <div className="w-full max-w-sm">
-                      <React.Suspense fallback={<div className="h-64 w-full bg-slate-900/40 rounded-2xl animate-pulse" />}>
+                      <React.Suspense fallback={<div className="cinematic-surface h-64 w-full bg-slate-900/40 rounded-2xl animate-pulse" />}>
                         <FlourSack3D />
                       </React.Suspense>
                     </div>
@@ -1599,16 +1524,16 @@ export default function App() {
             <ScrollMillingStory />
 
             {/* WHY CHOOSE US (Sourced brand values) */}
-            <React.Suspense fallback={<div className="h-64 w-full bg-slate-100 rounded-2xl animate-pulse my-8 max-w-7xl mx-auto" />}>
+            <React.Suspense fallback={<div className="cinematic-surface h-64 w-full bg-transparent rounded-2xl animate-pulse my-8 max-w-7xl mx-auto" />}>
               <WhyChooseUs />
             </React.Suspense>
 
             {/* FRESHLY SOURCED PRODUCTS - ORBITAL IMAGE WHEEL */}
-            <section className="max-w-7xl mx-auto px-4 my-8">
+            <section data-cinematic-section className="max-w-7xl mx-auto px-4 my-8">
               <AnimeScrollReveal>
-                <div className="bg-gradient-to-b from-stone-900 via-slate-900 to-slate-950 text-white rounded-3xl p-6 sm:p-10 border border-amber-500/20 shadow-2xl relative overflow-hidden min-h-[380px]">
-                  <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-                  <React.Suspense fallback={<div className="h-72 w-full bg-slate-900/50 rounded-2xl animate-pulse" />}>
+                <div className="cinematic-surface cinematic-glass cinematic-glass-dark bg-gradient-to-b from-stone-900 via-slate-900 to-slate-950 text-white rounded-3xl p-6 sm:p-10 border border-amber-500/20 shadow-2xl relative overflow-hidden min-h-[380px]">
+                  <div className="cinematic-surface absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+                  <React.Suspense fallback={<div className="cinematic-surface h-72 w-full bg-slate-900/50 rounded-2xl animate-pulse" />}>
                     <OrbitalImageWheel
                       images={freshSourcedOrbitalItems}
                       title="Freshly Sourced Products"
@@ -1632,11 +1557,11 @@ export default function App() {
             </section>
 
             {/* POPULAR PRODUCTS IN AREA - ORBITAL IMAGE WHEEL */}
-            <section className="max-w-7xl mx-auto px-4 my-8">
+            <section data-cinematic-section className="max-w-7xl mx-auto px-4 my-8">
               <AnimeScrollReveal delay={120}>
-                <div className="bg-gradient-to-b from-slate-900 via-amber-950/40 to-slate-950 text-white rounded-3xl p-6 sm:p-10 border border-amber-500/25 shadow-2xl relative overflow-hidden min-h-[380px]">
-                  <div className="absolute bottom-0 left-0 w-96 h-96 bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
-                  <React.Suspense fallback={<div className="h-72 w-full bg-slate-900/50 rounded-2xl animate-pulse" />}>
+                <div className="cinematic-surface cinematic-glass cinematic-glass-dark cinematic-glass-warm bg-gradient-to-b from-slate-900 via-amber-950/40 to-slate-950 text-white rounded-3xl p-6 sm:p-10 border border-amber-500/25 shadow-2xl relative overflow-hidden min-h-[380px]">
+                  <div className="cinematic-surface absolute bottom-0 left-0 w-96 h-96 bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
+                  <React.Suspense fallback={<div className="cinematic-surface h-72 w-full bg-slate-900/50 rounded-2xl animate-pulse" />}>
                     <OrbitalImageWheel
                       images={popularAreaOrbitalItems}
                       title="Popular In Your Area"
@@ -2203,6 +2128,7 @@ export default function App() {
           setCreatedOrder(null);
         }}
         cartCount={cartItems.length}
+        bounceTrigger={cartBounce}
         wishlistCount={wishlistIds.length}
         onOpenCart={() => setIsCartOpen(true)}
         onOpenWishlist={() => setIsWishlistOpen(true)}
@@ -2727,7 +2653,7 @@ export default function App() {
           className="flex flex-col items-center justify-center flex-1 h-full min-h-[48px] cursor-pointer transition-colors text-slate-500 font-medium relative"
         >
           <div className="relative">
-            <ShoppingBag className="w-5 h-5 text-amber-500 mb-0.5" />
+            <ShoppingBag key={`sticky-basket-${cartBounce}`} className={`w-5 h-5 text-amber-500 mb-0.5 ${cartBounce > 0 ? "animate-basket-bounce" : ""}`} />
             <span className="absolute -top-1.5 -right-2 bg-amber-600 text-white font-black rounded-full px-1.5 py-0.5 text-[9px] leading-none shadow-2xs">
               {cartItems.length}
             </span>

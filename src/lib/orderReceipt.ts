@@ -26,8 +26,8 @@ export function generateOrderReceiptHtml(order: any, appUrl: string = ""): strin
   const address = isPickup
     ? "Babay Dee Store Depot: Main Gulraiz Phase 3 / High Court Rd, Rawalpindi (Self-Pickup)"
     : (customer.address || customer.confirmAddress || order.address || "Rawalpindi / Islamabad");
-  const city = customer.city || deliveryDetails.city || order.city || "Rawalpindi";
-  const area = customer.area || deliveryDetails.area || order.area || "Gulraiz Phase 3";
+  const city = customer.city || deliveryDetails.city || order.city || "";
+  const area = customer.area || deliveryDetails.area || order.area || "";
   const paymentMethod = order.paymentMethod || (isPickup ? "Pay at Store Counter" : "Cash on Delivery");
   
   const orderDate = new Date(order.createdAt || Date.now()).toLocaleString("en-US", {
@@ -36,13 +36,13 @@ export function generateOrderReceiptHtml(order: any, appUrl: string = ""): strin
     timeZone: "Asia/Karachi"
   });
 
-  const subtotal = order.subtotal || items.reduce((acc, it) => acc + ((it.price || 0) * (it.quantity || 1)), 0);
+  const subtotal = order.subtotal ?? items.reduce((acc, it) => acc + ((it.price || 0) * (it.quantity || 1)), 0);
   const deliveryCharges = isPickup ? 0 : (order.deliveryCharges ?? order.deliveryFee ?? 0);
   const discount = order.discount || 0;
-  const total = order.total || (subtotal + deliveryCharges - discount);
+  const total = order.total ?? (subtotal + deliveryCharges - discount);
 
   // Direct user to official live order tracker on babaydeeattachakki.com
-  const trackingLink = "https://babaydeeattachakki.com/?tab=tracker";
+  const trackingLink = "https://babaydeeattachakki.com/?tab=tracker&amp;order=" + encodeURIComponent(orderId);
 
   const itemsRows = items.map((item, idx) => {
     const itemTotal = (item.price || 0) * (item.quantity || 1);
@@ -296,13 +296,13 @@ export function generateOrderReceiptPlainText(order: any): string {
   const address = isPickup
     ? "Babay Dee Store Depot: Main Gulraiz Phase 3 / High Court Rd, Rawalpindi (Self-Pickup)"
     : (customer.address || customer.confirmAddress || order.address || "Rawalpindi / Islamabad");
-  const city = customer.city || deliveryDetails.city || order.city || "Rawalpindi";
-  const area = customer.area || deliveryDetails.area || order.area || "Gulraiz Phase 3";
+  const city = customer.city || deliveryDetails.city || order.city || "";
+  const area = customer.area || deliveryDetails.area || order.area || "";
   const paymentMethod = order.paymentMethod || (isPickup ? "Pay at Store Counter" : "Cash on Delivery");
 
-  const subtotal = order.subtotal || items.reduce((acc, it) => acc + ((it.price || 0) * (it.quantity || 1)), 0);
+  const subtotal = order.subtotal ?? items.reduce((acc, it) => acc + ((it.price || 0) * (it.quantity || 1)), 0);
   const deliveryCharges = isPickup ? 0 : (order.deliveryCharges ?? order.deliveryFee ?? 0);
-  const total = order.total || (subtotal + deliveryCharges);
+  const total = order.total ?? (subtotal + deliveryCharges - (order.discount || 0));
 
   const itemsList = items.map((it) => 
     `• ${it.name || "Item"} x ${it.quantity || 1} ${it.unit || "pack"} @ Rs. ${it.price || 0} = Rs. ${(it.price || 0) * (it.quantity || 1)}`
@@ -336,7 +336,7 @@ GRAND TOTAL:        Rs. ${total}
 ========================================
 
 Helpline: 0321-5010846 | orders@babaydeechakki.com
-Track Order Live: https://babaydeeattachakki.com/?tab=tracker
+Track Order: https://babaydeeattachakki.com/?tab=tracker&order=${encodeURIComponent(orderId)}
 Main Gulraiz Phase 3 / High Court Rd, Rawalpindi
 Thank you for choosing Babay Dee Atta Chakki!
   `.trim();
@@ -365,4 +365,20 @@ export function downloadOrderReceipt(order: any): void {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+/** Use the escaped receipt template for printing as well as downloads. */
+export function printOrderReceipt(order: any): void {
+  const frame = document.createElement('iframe');
+  frame.title = 'Print order receipt';
+  frame.style.cssText = 'position:fixed;width:0;height:0;border:0';
+  frame.onload = () => {
+    const target = frame.contentWindow;
+    if (!target) {frame.remove();return;}
+    target.addEventListener('afterprint',()=>frame.remove(),{once:true});
+    target.focus(); target.print();
+    setTimeout(()=>frame.remove(),60_000);
+  };
+  frame.srcdoc = generateOrderReceiptHtml(order);
+  document.body.appendChild(frame);
 }

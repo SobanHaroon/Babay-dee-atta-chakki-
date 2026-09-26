@@ -5,6 +5,7 @@ import { AnimatedNumber, AnimeCartItem } from "./AnimatedComponents";
 import { ProductIcon } from "./ProductIcon";
 import { WeightQtyEditor } from "./WeightQtyEditor";
 import { triggerHapticFeedback } from "../lib/utils";
+import { useDialogFocus } from '../lib/useDialogFocus';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -43,6 +44,7 @@ export function CartDrawer({
   onAreaChange,
   onCheckout,
 }: CartDrawerProps) {
+  useDialogFocus(isOpen, '#cart-drawer-container', onClose);
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const isPickup = fulfillmentType === "pickup";
 
@@ -62,6 +64,10 @@ export function CartDrawer({
         >
           <motion.div
             id="cart-drawer-container"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Your shopping basket"
+            tabIndex={-1}
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
@@ -81,6 +87,7 @@ export function CartDrawer({
               <button
                 onClick={onClose}
                 id="close-cart-btn"
+                aria-label="Close basket"
                 className="p-2.5 text-slate-400 hover:text-slate-600 rounded-full cursor-pointer transition-colors hover:bg-slate-100 w-10 h-10 flex items-center justify-center"
               >
                 <X className="w-5 h-5" />
@@ -225,11 +232,11 @@ export function CartDrawer({
                             <span>Direct Depot Delivery</span>
                           </div>
                           <p className="text-[11px] text-slate-600 leading-relaxed font-normal">
-                            Live road routing and delivery charges are calculated at checkout based on your exact delivery pin from our central Chakki depot (Main Gulraiz Phase 3 / High Court Rd).
+                            Enter your complete address at checkout to calculate delivery charges from the road distance to our store.
                           </p>
                           <div className="flex items-center gap-1.5 text-[10.5px] font-semibold text-emerald-800 bg-emerald-100/70 px-2.5 py-1 rounded-lg">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                            <span>Exact GPS Pin & Route Calculation in Next Step</span>
+                            <span>See your delivery charge before placing an order</span>
                           </div>
                         </div>
                       )}
@@ -255,7 +262,7 @@ export function CartDrawer({
                         </span>
                       ) : (
                         <span className="font-medium text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded text-[11px] border border-emerald-200">
-                          Calculated at Checkout via Map Pin
+                          Calculated from your address
                         </span>
                       )}
                     </div>
@@ -278,7 +285,7 @@ export function CartDrawer({
                     id="cart-drawer-checkout-btn"
                     className="w-full font-black px-4 py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer h-11 bg-amber-500 hover:bg-amber-600 active:scale-98 text-slate-950 uppercase tracking-wider text-xs"
                   >
-                    <span>{isPickup ? "Proceed to Store Pickup Confirmation" : "Proceed to Delivery & Map Checkout"}</span>
+                    <span>{isPickup ? "Proceed to Store Pickup Confirmation" : "Proceed to Checkout"}</span>
                   </button>
                 </div>
               )}

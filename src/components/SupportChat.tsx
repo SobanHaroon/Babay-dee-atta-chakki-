@@ -5,7 +5,7 @@ export function SupportChat() {
     const message = encodeURIComponent(
       "Assalam-o-Alaikum Babay Dee Atta Chakki! I am visiting your premium e-commerce store and would like to inquire about pure organic stone-ground Atta rates and delivery in Islamabad/Rawalpindi."
     );
-    window.open(`https://wa.me/923215010846?text=${message}`, "_blank");
+    window.open(`https://wa.me/923215010846?text=${message}`, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -13,6 +13,7 @@ export function SupportChat() {
       <button
         onClick={handleWhatsAppClick}
         id="whatsapp-direct-chat-btn"
+        aria-label="Chat with Babay Dee on WhatsApp"
         className="flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white p-3.5 lg:gap-2.5 lg:px-5 lg:py-3.5 rounded-full shadow-2xl cursor-pointer transition-all duration-300 group"
       >
         <svg
@@ -30,4 +31,3 @@ export function SupportChat() {
 }
 
 export default SupportChat;
-

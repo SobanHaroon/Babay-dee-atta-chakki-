@@ -1,3 +1,4 @@
+import { MotionConfig } from 'motion/react';
 import { Component, ReactNode, ErrorInfo, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
@@ -141,7 +142,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <ToastProvider>
-        <App />
+        <MotionConfig reducedMotion="user"><App /></MotionConfig>
       </ToastProvider>
     </ErrorBoundary>
   </StrictMode>,

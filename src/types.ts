@@ -74,6 +74,8 @@ export interface Order {
     longitude?: number;
   };
   deliveryDetails?: {
+    locationPrecision?: string;
+    matchedAddress?: string;
     city?: string;
     area?: string;
     distanceKm: number;

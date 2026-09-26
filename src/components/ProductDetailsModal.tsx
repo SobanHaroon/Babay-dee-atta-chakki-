@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "motion/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ProductIcon } from "./ProductIcon";
+import { useDialogFocus } from '../lib/useDialogFocus';
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -30,6 +31,7 @@ export function ProductDetailsModal({
   onAddToCart,
   onSelectProduct,
 }: ProductDetailsModalProps) {
+  useDialogFocus(true, '#product-details-container', onClose);
   const [quantity, setQuantity] = useState(1);
   const [activeDetailTab, setActiveDetailTab] = useState<"specs" | "nutrition">("specs");
 
@@ -155,6 +157,10 @@ export function ProductDetailsModal({
       <div
         ref={modalRef}
         id="product-details-container"
+        role="dialog"
+        aria-modal="true"
+        aria-label={product.name}
+        tabIndex={-1}
         className="product-overview-component bg-[#171412] text-slate-900 w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden relative max-h-[92vh] flex flex-col md:flex-row border border-amber-900/30 select-none"
       >
         {/* =========================================================

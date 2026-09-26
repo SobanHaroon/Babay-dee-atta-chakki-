@@ -1,8 +1,11 @@
+import { createDeliveryQuote, verifyDeliveryQuote, DeliveryQuoteError } from './addressDelivery.js';
+import { installSecurity, normalizePhone, priceCart } from './security.js';
+import { randomInt } from 'node:crypto';
 import "dotenv/config";
 import express from "express";
 import { createClient } from "@supabase/supabase-js";
 import { INITIAL_DELIVERY_AREAS, calculateDeliveryCharge, findDeliveryArea, DeliveryAreaRecord } from "../src/deliveryData.js";
-import { extractCityAndArea, findClosestTwinCityZone, formatGeoapifyAddress } from "../src/lib/mapUtils.js";
+import { forwardMapbox, reverseMapbox, drivingRoute, validCoordinates, deliveryFeeForRoute } from "../src/lib/mapbox.js";
 import { sendOrderConfirmationSMS, sendOrderStatusSMS, isSMSGatewayConfigured, isSMSPKConfigured, isTwilioConfigured } from "./smsService.js";
 import {
   sendOrderConfirmationEmail,
@@ -15,19 +18,13 @@ import {
 
 const app = express();
 
-// Enable universal CORS and Preflight handling for dev, preview iframe, and external callers
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
-  }
+installSecurity(app);
+app.use(express.json({ limit: '64kb' }));
+app.use(express.urlencoded({ extended: false, limit: '64kb', parameterLimit: 100 }));
+app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (error) return res.status(error.status === 413 ? 413 : 400).json({error: 'Invalid request body.'});
   next();
 });
-
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Initialize Supabase Client
 const dbUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://dlinknypnlmcrhgbediu.supabase.co";
@@ -39,7 +36,7 @@ let CUSTOM_DELIVERY_AREAS: DeliveryAreaRecord[] = [...INITIAL_DELIVERY_AREAS];
 
 // In-memory data structures
 const ACTIVE_ORDERS: any[] = [];
-const CHAT_SESSIONS: Record<string, { username: string; phone: string; messages: any[] }> = {};
+const CHAT_SESSIONS: Record<string, { username: string; phone: string; messages: any[] }> = Object.create(null);
 
 let CUSTOMER_REVIEWS = [
   {
@@ -265,7 +262,9 @@ async function getSupabaseProducts(): Promise<any[]> {
 // Helper function to trigger order notifications to the configured Ntfy topic immediately after successful checkout
 async function triggerOrderNotification(order: any): Promise<boolean> {
   try {
-    const ntfyTopic = process.env.NTFY_TOPIC || "baby_dee_chakki_orders_0c518";
+    const ntfyTopic = process.env.NTFY_TOPIC;
+    const ntfyToken = process.env.NTFY_TOKEN;
+    if (!ntfyTopic || !ntfyToken) return false;
     const items = Array.isArray(order.items) ? order.items : [];
     const itemsText = items
       .map((item: any) => `• ${item.name || "Item"} (${item.quantity || 1} ${item.unit || "unit"}) @ Rs.${item.price || 0} = Rs.${(item.price || 0) * (item.quantity || 1)}`)
@@ -301,6 +300,7 @@ Settlement Method: ${order.paymentMethod || "Cash on Delivery"}`;
     const response = await fetch(`https://ntfy.sh/${ntfyTopic}`, {
       method: "POST",
       headers: {
+        "Authorization": `Bearer ${ntfyToken}`,
         "Title": titleText,
         "Priority": "high",
         "Tags": "ear_of_rice,shopping_bags,bell"
@@ -391,7 +391,7 @@ app.get("/api/reviews", (req, res) => {
 
 app.post("/api/reviews", (req, res) => {
   const { name, rating, review, city } = req.body;
-  if (!name || !rating || !review) {
+  if (typeof name !== 'string' || name.length > 120 || typeof review !== 'string' || review.length > 3000 || !name.trim() || !review.trim() || (city && (typeof city !== 'string' || city.length > 100))) {
     return res.status(400).json({ error: "Name, rating and review fields are mandatory." });
   }
   const rNum = parseInt(rating);
@@ -411,10 +411,11 @@ app.post("/api/reviews", (req, res) => {
     date: new Date().toISOString().split("T")[0]
   };
   CUSTOMER_REVIEWS.unshift(newObj);
+  CUSTOMER_REVIEWS = CUSTOMER_REVIEWS.slice(0, 500);
   res.json({ success: true, review: newObj });
 });
 
-app.post("/api/order/feedback", (req, res) => {
+app.post("/api/order/feedback", requireOrderPhone, (req, res) => {
   const { orderId, rating, comment, customerName, bot_trap } = req.body;
   if (bot_trap) {
     return res.json({ success: true, message: "Feedback submitted successfully!" });
@@ -454,144 +455,15 @@ app.post("/api/order/feedback", (req, res) => {
   });
 });
 
-// Geoapify API Keys for Map Tiles, Driving Road Routing, and Forward/Reverse Geocoding
-const GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY || "443a4948e9f344ceb1d25b7ac672fabe";
-const GEOAPIFY_ROUTING_KEY = process.env.GEOAPIFY_ROUTING_KEY || process.env.GEOAPIFY_API_KEY || "807f1c518966416380a21121a25c2dcc";
-const GEOAPIFY_GEOCODING_KEY = process.env.GEOAPIFY_GEOCODING_KEY || process.env.GEOAPIFY_API_KEY || "d15cdaa40d7f471b96b99ddeb2c5a6f6";
-const GEOAPIFY_MAP_TILES_KEY = process.env.GEOAPIFY_MAP_TILES_KEY || process.env.GEOAPIFY_API_KEY || "443a4948e9f344ceb1d25b7ac672fabe";
+const MAPBOX_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || process.env.VITE_MAPBOX_ACCESS_TOKEN || "";
 
-// Server-side robust reverse geocoding (Geoapify Geocoding API + OSM Nominatim fallback + Twin Cities sector resolver)
-export async function serverReverseGeocode(lat: number, lng: number): Promise<{ address: string; city: string; area: string; extracted?: any; omitted?: any }> {
-  let address = "";
-  const closestData = findClosestTwinCityZone(lat, lng);
-  let city: string = closestData ? closestData.zone.city : (lat > 33.655 ? "Islamabad" : "Rawalpindi");
-  let area: string = closestData ? closestData.zone.name : "Gulraiz Phase 3";
-  let extractedResult: any = undefined;
-  let omittedResult: any = undefined;
-
-  // 1. Geoapify Reverse Geocoding API
-  if (GEOAPIFY_GEOCODING_KEY) {
-    try {
-      const geoapifyUrl = `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&format=json&apiKey=${GEOAPIFY_GEOCODING_KEY}`;
-      const res = await fetch(geoapifyUrl);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.results && data.results.length > 0) {
-          const item = data.results[0];
-          const formattedResult = formatGeoapifyAddress(item, lat, lng, data, true);
-          address = formattedResult.formatted;
-          city = formattedResult.city;
-          area = formattedResult.area;
-          extractedResult = formattedResult.extracted;
-          omittedResult = formattedResult.omitted;
-        }
-      }
-    } catch (err) {
-      console.warn("Server Geoapify reverse geocode warning:", err);
-    }
-  }
-
-  // 2. Fallback: OpenStreetMap Nominatim with proper server User-Agent header
-  if (!address) {
-    try {
-      const osmUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
-      const res = await fetch(osmUrl, {
-        headers: {
-          "User-Agent": "BabayDeeChakkiStore/1.0 (contact: info@babaydee.com)",
-          "Accept-Language": "en"
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.display_name) {
-          address = data.display_name;
-        }
-      }
-    } catch (err) {
-      console.warn("Server OSM reverse geocode warning:", err);
-    }
-  }
-
-  // 3. Fallback to Sector/Society & City if geocoder failed (never output raw coordinates as address)
-  if (!address) {
-    address = `${area}, ${city}, Pakistan`;
-  }
-
-  const parsed = extractCityAndArea(address, lat, lng);
-  return {
-    address,
-    city: parsed.city || city,
-    area: parsed.area || area,
-    extracted: extractedResult,
-    omitted: omittedResult
-  };
+export async function serverReverseGeocode(lat: number, lng: number) {
+  const place = await reverseMapbox(lat, lng, MAPBOX_TOKEN);
+  return place || { address: "", city: "", area: "", details: undefined };
 }
 
-// Server-side robust forward geocoding (Address -> Coordinates) via Geoapify Geocoding API
-export async function serverGeocodeAddress(query: string): Promise<{ lat: number; lng: number; address: string; city: string; area: string; extracted?: any; omitted?: any } | null> {
-  const clean = query.trim();
-  if (!clean) return null;
-
-  // 1. Geoapify Geocoding API
-  if (GEOAPIFY_GEOCODING_KEY) {
-    try {
-      const geoapifyUrl = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(clean)}&filter=countrycode:pk&bias=proximity:73.104510,33.567348&format=json&apiKey=${GEOAPIFY_GEOCODING_KEY}`;
-      const res = await fetch(geoapifyUrl);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.results && data.results.length > 0) {
-          const item = data.results[0];
-          const lat = parseFloat(item.lat);
-          const lng = parseFloat(item.lon);
-          if (!isNaN(lat) && !isNaN(lng)) {
-            const formattedResult = formatGeoapifyAddress(item, lat, lng, data, true);
-            return {
-              lat,
-              lng,
-              address: formattedResult.formatted || item.formatted || clean,
-              city: formattedResult.city,
-              area: formattedResult.area,
-              extracted: formattedResult.extracted,
-              omitted: formattedResult.omitted
-            };
-          }
-        }
-      }
-    } catch (err) {
-      console.warn("Server Geoapify geocode warning:", err);
-    }
-  }
-
-  // 2. OpenStreetMap Nominatim with server headers
-  try {
-    const osmUrl = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=pk&q=${encodeURIComponent(clean)}&limit=1`;
-    const res = await fetch(osmUrl, {
-      headers: {
-        "User-Agent": "BabayDeeChakkiStore/1.0 (contact: info@babaydee.com)",
-        "Accept-Language": "en"
-      }
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.length > 0) {
-        const lat = parseFloat(data[0].lat);
-        const lng = parseFloat(data[0].lon);
-        const formatted = data[0].display_name;
-        const parsed = extractCityAndArea(formatted, lat, lng);
-        return {
-          lat,
-          lng,
-          address: formatted,
-          city: parsed.city,
-          area: parsed.area
-        };
-      }
-    }
-  } catch (err) {
-    console.warn("Server Nominatim geocode warning:", err);
-  }
-
-  return null;
+export async function serverGeocodeAddress(query: string) {
+  return (await forwardMapbox(query, MAPBOX_TOKEN, { autocomplete: false }))[0] || null;
 }
 
 // Helper: Fetch dynamic delivery settings from Supabase delivery_settings table
@@ -608,7 +480,7 @@ export async function getSupabaseDeliverySettings() {
   if (!dbClient) return fallbackSettings;
 
   try {
-    const { data, error } = await dbClient.from("delivery_settings").select("*").limit(1);
+    const { data, error } = await dbClient.from("delivery_settings").select("*").limit(1).abortSignal(AbortSignal.timeout(5000));
     if (!error && data && data.length > 0) {
       const row = data[0];
       const lat = parseFloat(row.store_latitude ?? row.store_lat ?? row.latitude ?? row.lat ?? row["Store Latitude"] ?? row["store latitude"]);
@@ -619,7 +491,7 @@ export async function getSupabaseDeliverySettings() {
       if (!isNaN(lat) && lat !== 0) fallbackSettings.storeLatitude = lat;
       if (!isNaN(lng) && lng !== 0) fallbackSettings.storeLongitude = lng;
       if (!isNaN(price) && price > 0) fallbackSettings.pricePerKm = price;
-      if (!isNaN(maxDist) && maxDist > 0) fallbackSettings.maxDeliveryDistanceKm = Math.max(45, maxDist);
+      if (!isNaN(maxDist) && maxDist > 0) fallbackSettings.maxDeliveryDistanceKm = maxDist;
       if (row.store_address || row.address) fallbackSettings.storeAddress = row.store_address || row.address;
       if (row.store_name || row.name) fallbackSettings.storeName = row.store_name || row.name;
     }
@@ -630,156 +502,8 @@ export async function getSupabaseDeliverySettings() {
   return fallbackSettings;
 }
 
-// Helper: Compute real driving road distance via Geoapify Routing API with OSRM & interpolated mathematical fallback
-export async function computeGeoapifyDrivingDistance(
-  originLat: number,
-  originLng: number,
-  destLat: number,
-  destLng: number
-): Promise<{
-  success: boolean;
-  distanceMeters: number;
-  distanceKm: number;
-  durationMinutes: number;
-  routeCoordinates: Array<{ lat: number; lng: number }>;
-  polyline?: string;
-}> {
-  // 1. Try Geoapify Routing API (driving mode)
-  if (GEOAPIFY_ROUTING_KEY) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
-      const url = `https://api.geoapify.com/v1/routing?waypoints=${originLat},${originLng}|${destLat},${destLng}&mode=drive&apiKey=${GEOAPIFY_ROUTING_KEY}`;
-      const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.features && data.features.length > 0) {
-          const feature = data.features[0];
-          const props = feature.properties || {};
-          const distanceMeters = Math.round(props.distance || 0);
-          const distanceKm = Math.round((distanceMeters / 1000) * 100) / 100;
-          const durationMinutes = Math.ceil((props.time || 0) / 60) || Math.max(15, Math.ceil(distanceKm * 2.2));
-
-          const routeCoordinates: Array<{ lat: number; lng: number }> = [];
-          if (feature.geometry?.coordinates) {
-            const coords = feature.geometry.coordinates;
-            if (Array.isArray(coords)) {
-              if (Array.isArray(coords[0]) && typeof coords[0][0] === "number") {
-                for (const pt of coords) {
-                  if (Array.isArray(pt) && pt.length >= 2) {
-                    routeCoordinates.push({ lat: pt[1], lng: pt[0] });
-                  }
-                }
-              } else if (Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
-                for (const seg of coords) {
-                  if (Array.isArray(seg)) {
-                    for (const pt of seg) {
-                      if (Array.isArray(pt) && pt.length >= 2) {
-                        routeCoordinates.push({ lat: pt[1], lng: pt[0] });
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-
-          if (routeCoordinates.length > 0) {
-            return {
-              success: true,
-              distanceMeters,
-              distanceKm,
-              durationMinutes,
-              routeCoordinates
-            };
-          }
-        }
-      }
-    } catch (geoapifyErr) {
-      console.warn("Geoapify Routing API warning, attempting secondary OSRM routing:", geoapifyErr);
-    }
-  }
-
-  // 2. Secondary fallback: OpenStreetMap / OSRM Public Routing API
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
-    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${originLng},${originLat};${destLng},${destLat}?overview=full&geometries=geojson`;
-    const osrmRes = await fetch(osrmUrl, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "BabayDeeChakkiApp/1.0",
-        "Accept": "application/json"
-      }
-    });
-    clearTimeout(timeoutId);
-
-    if (osrmRes.ok) {
-      const osrmData = await osrmRes.json();
-      if (osrmData.routes && osrmData.routes.length > 0) {
-        const route = osrmData.routes[0];
-        const distMeters = Math.round(route.distance || 0);
-        const distKm = Math.round((distMeters / 1000) * 100) / 100;
-        const durMins = Math.ceil((route.duration || 0) / 60) || Math.max(15, Math.ceil(distKm * 2.2));
-        const coords: Array<{ lat: number; lng: number }> = [];
-
-        if (route.geometry?.coordinates && Array.isArray(route.geometry.coordinates)) {
-          for (const pt of route.geometry.coordinates) {
-            if (Array.isArray(pt) && pt.length >= 2) {
-              coords.push({ lat: pt[1], lng: pt[0] });
-            }
-          }
-        }
-
-        if (coords.length > 0) {
-          return {
-            success: true,
-            distanceMeters: distMeters,
-            distanceKm: distKm,
-            durationMinutes: durMins,
-            routeCoordinates: coords
-          };
-        }
-      }
-    }
-  } catch (osrmErr) {
-    console.warn("OSRM routing API fallback warning:", osrmErr);
-  }
-
-  // 3. Fallback: High-precision Haversine with 1.28x road curvature multiplier & interpolated road waypoints
-  const R = 6371;
-  const dLat = (destLat - originLat) * (Math.PI / 180);
-  const dLon = (destLng - originLng) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(originLat * (Math.PI / 180)) *
-      Math.cos(destLat * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const directKm = R * c;
-  const roadKm = Math.max(0.5, Math.round(directKm * 1.28 * 100) / 100);
-
-  // Generate realistic curved waypoint coordinates along the road vector
-  const waypoints: Array<{ lat: number; lng: number }> = [];
-  const steps = 8;
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    const curveFactor = Math.sin(t * Math.PI) * 0.0025;
-    const lat = originLat + (destLat - originLat) * t + curveFactor;
-    const lng = originLng + (destLng - originLng) * t + curveFactor * 0.5;
-    waypoints.push({ lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) });
-  }
-
-  return {
-    success: true,
-    distanceMeters: Math.round(roadKm * 1000),
-    distanceKm: roadKm,
-    durationMinutes: Math.max(15, Math.ceil(roadKm * 2.2)),
-    routeCoordinates: waypoints
-  };
+export async function computeMapboxDrivingDistance(originLat: number, originLng: number, destLat: number, destLng: number) {
+  return drivingRoute(originLat, originLng, destLat, destLng, MAPBOX_TOKEN);
 }
 
 // Delivery Settings API Endpoint
@@ -809,10 +533,10 @@ app.get("/api/delivery/settings", async (req, res) => {
 app.post("/api/delivery/reverse-geocode", async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
-    const lat = parseFloat(latitude);
-    const lng = parseFloat(longitude);
+    const lat = typeof latitude === "number" ? latitude : NaN;
+    const lng = typeof longitude === "number" ? longitude : NaN;
 
-    if (isNaN(lat) || isNaN(lng)) {
+    if (!validCoordinates(lat, lng)) {
       return res.status(400).json({ error: "Valid latitude and longitude are required." });
     }
 
@@ -848,7 +572,10 @@ app.post("/api/delivery/geocode", async (req, res) => {
       longitude: geoResult.lng,
       address: geoResult.address,
       city: geoResult.city,
-      area: geoResult.area
+      area: geoResult.area,
+      details: geoResult.details,
+      accuracy: geoResult.accuracy,
+      featureType: geoResult.featureType
     });
   } catch (err: any) {
     console.error("Geocode endpoint exception:", err);
@@ -856,222 +583,51 @@ app.post("/api/delivery/geocode", async (req, res) => {
   }
 });
 
-// Server-side Geoapify Address Autocomplete Endpoint
+// Mapbox address autocomplete, biased toward the selected map location.
 app.post("/api/delivery/autocomplete", async (req, res) => {
   try {
-    const { text } = req.body || {};
-    if (!text || typeof text !== "string" || !text.trim() || text.trim().length < 2) {
-      return res.json({ success: true, results: [] });
-    }
-
-    const clean = text.trim();
-    if (GEOAPIFY_GEOCODING_KEY) {
-      try {
-        const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(
-          clean
-        )}&filter=countrycode:pk&bias=proximity:73.104510,33.567348&limit=8&apiKey=${GEOAPIFY_GEOCODING_KEY}`;
-        const apiRes = await fetch(url);
-        if (apiRes.ok) {
-          const data = await apiRes.json();
-          if (data.features && Array.isArray(data.features)) {
-            const results = data.features.map((f: any, idx: number) => {
-              const props = f.properties || {};
-              const lat = parseFloat(props.lat);
-              const lng = parseFloat(props.lon);
-              const formattedResult = formatGeoapifyAddress(props, lat, lng, data, false);
-              const mainText = props.address_line1 || props.name || props.street || clean;
-              const secondaryText = props.address_line2 || `${props.city || "Rawalpindi"}, Pakistan`;
-              const formatted = formattedResult.formatted || props.formatted || `${mainText}, ${secondaryText}`;
-              return {
-                placeId: props.place_id || `geo-${idx}-${lat}-${lng}`,
-                formatted,
-                mainText,
-                secondaryText,
-                lat,
-                lng,
-                city: formattedResult.city || props.city || "Rawalpindi",
-                area: formattedResult.area || props.suburb || "Gulraiz Phase 3"
-              };
-            });
-            return res.json({ success: true, results });
-          }
-        }
-      } catch (autoErr) {
-        console.warn("Geoapify server autocomplete warning:", autoErr);
-      }
-    }
-    return res.json({ success: true, results: [] });
-  } catch (err: any) {
-    console.error("Autocomplete endpoint error:", err);
-    return res.status(500).json({ error: "Failed to fetch autocomplete suggestions." });
+    const { text, proximity } = req.body || {};
+    if (typeof text !== "string" || text.trim().length < 2) return res.json({ success: true, results: [] });
+    const results = await forwardMapbox(text, MAPBOX_TOKEN, { proximity });
+    return res.json({ success: true, results });
+  } catch {
+    return res.status(503).json({ success: false, error: "Address search is unavailable. Please retry or place your pin manually." });
   }
 });
 
-// Server-side Route & Delivery Charge Calculation API Endpoint (Infallible)
-app.post("/api/delivery/calculate-route", async (req, res) => {
+app.post("/api/delivery/quote", async (req, res) => {
   try {
-    const { latitude, longitude, address, forceReverseGeocode } = req.body || {};
+    const settings = await getSupabaseDeliverySettings();
+    return res.json(await createDeliveryQuote(req.body?.address, settings, MAPBOX_TOKEN));
+  } catch (error) {
+    return res.status(error instanceof DeliveryQuoteError ? error.status : 503).json({ success: false, deliverable: false, error: error instanceof DeliveryQuoteError ? error.message : "Unable to calculate delivery charges. Please try again." });
+  }
+});
 
-    let custLat = parseFloat(latitude);
-    let custLng = parseFloat(longitude);
-
-    // If coordinates are missing or invalid, default to central twin cities coordinate
-    if (isNaN(custLat) || isNaN(custLng) || custLat === 0 || custLng === 0) {
-      custLat = 33.6007;
-      custLng = 73.0679;
-    }
-
-    let storeLatitude = 33.567348;
-    let storeLongitude = 73.104510;
-    let pricePerKm = 50;
-    let maxDeliveryDistanceKm = 30;
-    let storeAddress = "Babay Dee Atta Chakki, Main Gulraiz Phase 3 / High Court Rd, Rawalpindi";
-    let storeName = "Babay Dee Atta Chakki";
-
-    try {
-      const settings = await getSupabaseDeliverySettings();
-      storeLatitude = settings.storeLatitude || storeLatitude;
-      storeLongitude = settings.storeLongitude || storeLongitude;
-      pricePerKm = settings.pricePerKm || pricePerKm;
-      maxDeliveryDistanceKm = settings.maxDeliveryDistanceKm || maxDeliveryDistanceKm;
-      storeAddress = settings.storeAddress || storeAddress;
-      storeName = settings.storeName || storeName;
-    } catch (settingsErr) {
-      console.warn("Could not fetch delivery settings, using default store constants:", settingsErr);
-    }
-
-    let resolvedAddress = address || "";
-    let detectedCity = custLat > 33.655 ? "Islamabad" : "Rawalpindi";
-    let detectedArea = "Gulraiz Phase 3";
-
-    try {
-      if (!resolvedAddress || resolvedAddress.trim().length < 5 || resolvedAddress.startsWith("Location (") || resolvedAddress.startsWith("Pinned Location") || resolvedAddress.startsWith("Delivery Pin") || resolvedAddress === "GPS Device Pin" || forceReverseGeocode) {
-        const geo = await serverReverseGeocode(custLat, custLng);
-        resolvedAddress = geo.address;
-        detectedCity = geo.city;
-        detectedArea = geo.area;
-      } else {
-        const parsed = extractCityAndArea(resolvedAddress, custLat, custLng);
-        detectedCity = parsed.city;
-        detectedArea = parsed.area;
-      }
-    } catch (geoErr) {
-      console.warn("Geocoding address resolution error, fallback to area tag:", geoErr);
-      const parsed = extractCityAndArea(resolvedAddress || "", custLat, custLng);
-      detectedCity = parsed.city;
-      detectedArea = parsed.area;
-      if (!resolvedAddress || resolvedAddress.startsWith("Pinned Location") || resolvedAddress.startsWith("Delivery Pin") || resolvedAddress.startsWith("Location (")) {
-        resolvedAddress = `${detectedArea}, ${detectedCity}, Pakistan`;
-      }
-    }
-
-    let distanceKm = 1;
-    let distanceMeters = 1000;
-    let durationMinutes = 20;
-    let routeCoordinates: Array<{ lat: number; lng: number }> = [
-      { lat: storeLatitude, lng: storeLongitude },
-      { lat: custLat, lng: custLng }
-    ];
-
-    try {
-      const routeRes = await computeGeoapifyDrivingDistance(
-        storeLatitude,
-        storeLongitude,
-        custLat,
-        custLng
-      );
-      distanceKm = routeRes.distanceKm;
-      distanceMeters = routeRes.distanceMeters;
-      durationMinutes = routeRes.durationMinutes;
-      if (routeRes.routeCoordinates && routeRes.routeCoordinates.length > 0) {
-        routeCoordinates = routeRes.routeCoordinates;
-      }
-    } catch (routeErr) {
-      console.warn("Driving distance computation fallback:", routeErr);
-      // Haversine fallback calculation
-      const R = 6371;
-      const dLat = (custLat - storeLatitude) * (Math.PI / 180);
-      const dLon = (custLng - storeLongitude) * (Math.PI / 180);
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(storeLatitude * (Math.PI / 180)) *
-          Math.cos(custLat * (Math.PI / 180)) *
-          Math.sin(dLon / 2) *
-          Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      distanceKm = Math.max(0.5, Math.round(R * c * 1.25 * 10) / 10);
-      distanceMeters = Math.round(distanceKm * 1000);
-      durationMinutes = Math.max(15, Math.ceil(distanceKm * 2.2));
-    }
-
-    const isDeliverable = distanceKm <= maxDeliveryDistanceKm;
-    const deliveryCharge = Math.max(50, Math.round(distanceKm * pricePerKm));
-
+app.post("/api/delivery/calculate-route", async (req, res) => {
+  const { latitude, longitude, address } = req.body || {};
+  const lat = typeof latitude === "number" ? latitude : Number.NaN;
+  const lng = typeof longitude === "number" ? longitude : Number.NaN;
+  if (!validCoordinates(lat, lng)) return res.status(400).json({ success: false, error: "Valid latitude and longitude are required." });
+  try {
+    const settings = await getSupabaseDeliverySettings();
+    const [route, geo] = await Promise.all([
+      computeMapboxDrivingDistance(settings.storeLatitude, settings.storeLongitude, lat, lng),
+      serverReverseGeocode(lat, lng).catch(() => ({ address: "", city: "", area: "", details: undefined })),
+    ]);
+    const deliverable = route.distanceKm <= settings.maxDeliveryDistanceKm;
     return res.json({
-      success: true,
-      deliverable: isDeliverable,
-      distanceKm,
-      distanceMeters,
-      durationMinutes,
-      durationText: `${durationMinutes} mins`,
-      deliveryCharge,
-      pricePerKm,
-      maxDeliveryDistanceKm,
-      routeCoordinates,
-      polyline: "",
-      city: detectedCity,
-      area: detectedArea,
-      storeLocation: {
-        lat: storeLatitude,
-        lng: storeLongitude,
-        address: storeAddress,
-        name: storeName
-      },
-      customerLocation: {
-        lat: custLat,
-        lng: custLng,
-        address: resolvedAddress,
-        city: detectedCity,
-        area: detectedArea
-      },
-      message: isDeliverable
-        ? "Location is within delivery zone."
-        : `Sorry, we currently don't deliver to this location. (Maximum delivery radius is ${maxDeliveryDistanceKm} km)`
+      ...route, deliverable,
+      deliveryCharge: deliveryFeeForRoute(route.distanceKm, settings.pricePerKm),
+      pricePerKm: settings.pricePerKm, maxDeliveryDistanceKm: settings.maxDeliveryDistanceKm,
+      city: geo.city, area: geo.area, details: geo.details,
+      storeLocation: { lat: settings.storeLatitude, lng: settings.storeLongitude, address: settings.storeAddress, name: settings.storeName },
+      // Preserve the actual customer pin. Reverse-geocoder centroids never replace it.
+      customerLocation: { lat, lng, address: typeof address === "string" && address.trim() ? address.trim() : geo.address, city: geo.city, area: geo.area },
+      message: deliverable ? "Driving route verified." : "Delivery is available within " + settings.maxDeliveryDistanceKm + " km by road.",
     });
-  } catch (masterErr: any) {
-    console.error("Master calculate-route error, delivering resilient fallback:", masterErr);
-    return res.json({
-      success: true,
-      deliverable: true,
-      distanceKm: 5,
-      distanceMeters: 5000,
-      durationMinutes: 20,
-      durationText: "20 mins",
-      deliveryCharge: 250,
-      pricePerKm: 50,
-      maxDeliveryDistanceKm: 30,
-      routeCoordinates: [
-        { lat: 33.567348, lng: 73.104510 },
-        { lat: 33.6007, lng: 73.0679 }
-      ],
-      polyline: "",
-      city: "Rawalpindi",
-      area: "Gulraiz Phase 3",
-      storeLocation: {
-        lat: 33.567348,
-        lng: 73.104510,
-        address: "Babay Dee Atta Chakki, Main Gulraiz Phase 3 / High Court Rd, Rawalpindi",
-        name: "Babay Dee Atta Chakki"
-      },
-      customerLocation: {
-        lat: 33.6007,
-        lng: 73.0679,
-        address: "Gulraiz Phase 3, Rawalpindi, Pakistan",
-        city: "Rawalpindi",
-        area: "Gulraiz Phase 3"
-      },
-      message: "Location is within delivery zone."
-    });
+  } catch (error: any) {
+    return res.status(503).json({ success: false, deliverable: false, error: error.message || "Unable to verify delivery charges. Please retry." });
   }
 });
 
@@ -1205,81 +761,42 @@ app.post("/api/checkout", async (req, res) => {
     } = req.body;
 
     const isPickup = fulfillmentType === "pickup";
+    if (typeof name !== 'string' || name.trim().length < 2 || name.length > 120 || !/^03\d{9}$/.test(normalizePhone(phone)) || (email && (typeof email !== 'string' || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) || (!isPickup && (typeof address !== 'string' || address.length > 600))) {
+      return res.status(400).json({error: 'Please provide valid customer details.'});
+    }
+    if (!['pickup', 'delivery'].includes(fulfillmentType)) return res.status(400).json({error: 'Invalid fulfillment type.'});
 
     if (!name || !phone || (!isPickup && !address)) {
       return res.status(400).json({ error: "Customer name, contact phone, and delivery address are required." });
     }
 
-    const validCity = String(city || req.body.deliveryCity || "Rawalpindi").trim();
-    let validArea = String(subLocation || area || req.body.deliveryArea || req.body.neighborhood || (isPickup ? "Depot Pickup" : "Gulraiz Phase 3")).trim();
-
-    if (validArea.toLowerCase() === validCity.toLowerCase()) {
-      validArea = String(subLocation || (isPickup ? "Depot Pickup" : "Gulraiz Phase 3")).trim();
-    }
-
-    const custLat = parseFloat(reqLat ?? customerCoordinates?.lat ?? customerCoordinates?.latitude);
-    const custLng = parseFloat(reqLng ?? customerCoordinates?.lng ?? customerCoordinates?.longitude);
-    const hasCoordinates = !isPickup && !isNaN(custLat) && !isNaN(custLng);
-
-    // Fetch dynamic store delivery settings
     const settings = await getSupabaseDeliverySettings();
-
-    let computedDistanceKm = isPickup ? 0 : (typeof reqDistanceKm === "number" && reqDistanceKm > 0 ? reqDistanceKm : 5);
-    let computedDeliveryFee = isPickup ? 0 : Math.round(computedDistanceKm * settings.pricePerKm);
-    let isDeliverable = true;
-
-    if (!isPickup && hasCoordinates) {
-      // Re-verify driving distance server-side via Geoapify Routing API to prevent frontend tampering
-      const verifiedRoute = await computeGeoapifyDrivingDistance(
-        settings.storeLatitude,
-        settings.storeLongitude,
-        custLat,
-        custLng
-      );
-
-      computedDistanceKm = verifiedRoute.distanceKm;
-      isDeliverable = computedDistanceKm <= settings.maxDeliveryDistanceKm;
-
-      if (!isDeliverable) {
-        return res.status(400).json({
-          error: `Sorry, we currently don't deliver to this location. (Maximum delivery radius is ${settings.maxDeliveryDistanceKm} km, detected: ${computedDistanceKm} km)`
-        });
-      }
-
-      computedDeliveryFee = Math.round(computedDistanceKm * settings.pricePerKm);
-    } else if (!isPickup) {
-      // Lookup delivery area record from server database / memory
-      let matchedRecord = findDeliveryArea(validCity, validArea, CUSTOM_DELIVERY_AREAS);
-      if (matchedRecord) {
-        if (!matchedRecord.available) {
-          return res.status(400).json({
-            error: "Sorry, we currently don't deliver to this area."
-          });
-        }
-        computedDistanceKm = matchedRecord.distanceKm;
-        computedDeliveryFee = calculateDeliveryCharge(computedDistanceKm, matchedRecord.deliveryRate || settings.pricePerKm);
-      }
+    let quote: ReturnType<typeof verifyDeliveryQuote> | null = null;
+    if (!isPickup) {
+      try { quote = verifyDeliveryQuote(req.body.deliveryQuoteToken, address, settings); }
+      catch (error) { return res.status(409).json({error: "Please calculate delivery charges again before placing your order."}); }
     }
+    const validCity = isPickup ? "Rawalpindi" : quote.city;
+    const validArea = isPickup ? "Store pickup" : quote.area;
+    const custLat = quote?.latitude;
+    const custLng = quote?.longitude;
+    const hasCoordinates = !isPickup && validCoordinates(custLat, custLng);
+    const computedDistanceKm = quote?.distanceKm ?? 0;
+    const computedDeliveryFee = quote?.deliveryCharge ?? 0;
 
-    const validCartItems = Array.isArray(cartItems) && cartItems.length > 0
-      ? cartItems
-      : (Array.isArray(req.body.items) && req.body.items.length > 0 ? req.body.items : []);
-    if (validCartItems.length === 0) {
-      return res.status(400).json({ error: "Your basket is empty. Please add items to your basket before placing an order." });
-    }
-
-    const subtotal = validCartItems.reduce((acc: number, item: any) => {
-      const price = typeof item.price === "number" ? item.price : parseFloat(item.price) || 0;
-      const qty = typeof item.quantity === "number" ? item.quantity : parseInt(item.quantity) || 1;
-      return acc + (price * qty);
-    }, 0);
+    const catalog = await getSupabaseProducts();
+    if (!catalog.length) return res.status(503).json({error: 'The catalog is temporarily unavailable. Please try again.'});
+    let validCartItems;
+    try { validCartItems = priceCart(cartItems || req.body.items, catalog); }
+    catch (error: any) { return res.status(400).json({error: error.message}); }
+    const subtotal = Math.round(validCartItems.reduce((sum, item) => sum + item.price * item.quantity, 0) * 100) / 100;
     
     // Delivery charge is 0 for store pickup, or standard calculated distance fee for delivery
     const finalDeliveryCharge = isPickup ? 0 : computedDeliveryFee;
     const discount = 0;
     const total = subtotal + finalDeliveryCharge;
 
-    const numericId = Math.floor(100000 + Math.random() * 900000);
+    const numericId = randomInt(100000000, 2000000000);
     const orderId = "BDEC-" + numericId;
     const newOrder = {
       id: orderId,
@@ -1301,6 +818,8 @@ app.post("/api/checkout", async (req, res) => {
         deliveryRate: isPickup ? 0 : settings.pricePerKm,
         baseDeliveryFee: computedDeliveryFee,
         actualDeliveryFee: finalDeliveryCharge,
+        matchedAddress: quote?.matchedAddress,
+        locationPrecision: quote?.type,
         latitude: hasCoordinates ? custLat : undefined,
         longitude: hasCoordinates ? custLng : undefined
       },
@@ -1421,6 +940,7 @@ app.post("/api/checkout", async (req, res) => {
       return res.status(503).json({ success: false, error: "Your order could not be saved. Your basket has been kept. Please try again shortly." });
     }
     ACTIVE_ORDERS.push(newOrder);
+    if (ACTIVE_ORDERS.length > 500) ACTIVE_ORDERS.shift();
 
     // Await order notification dispatch (Ntfy push & Twilio SMS confirmation)
     try {
@@ -1482,7 +1002,7 @@ app.post("/api/notifications/order-sms", async (req, res) => {
     });
   } catch (err: any) {
     console.error("API /api/notifications/order-sms error:", err);
-    return res.status(500).json({ error: err.message || "Failed to dispatch SMS notification" });
+    return res.status(500).json({ error: "Failed to dispatch SMS notification" });
   }
 });
 
@@ -1502,7 +1022,7 @@ app.post("/api/notifications/order-status-sms", async (req, res) => {
     });
   } catch (err: any) {
     console.error("API /api/notifications/order-status-sms error:", err);
-    return res.status(500).json({ error: err.message || "Failed to dispatch status SMS" });
+    return res.status(500).json({ error: "Failed to dispatch status SMS" });
   }
 });
 
@@ -1528,7 +1048,7 @@ app.post("/api/notifications/ntfy", async (req, res) => {
     return res.json({ success });
   } catch (err: any) {
     console.error("API /api/notifications/ntfy error:", err);
-    return res.status(500).json({ error: err.message || "Failed to dispatch Ntfy notification" });
+    return res.status(500).json({ error: "Failed to dispatch Ntfy notification" });
   }
 });
 
@@ -1586,11 +1106,23 @@ async function getOrderById(orderId: string): Promise<any | null> {
   return null;
 }
 
+async function requireOrderPhone(req: express.Request, res: express.Response, next: express.NextFunction) {
+  try {
+    const id = req.params.id || req.body?.orderId;
+    const phone = normalizePhone(req.get('X-Order-Phone'));
+    if (!phone || !/^03\d{9}$/.test(phone)) return res.status(401).json({error: 'Enter the phone number used for this order.'});
+    const order = await getOrderById(String(id || ''));
+    if (!order || normalizePhone(order.customer?.phone) !== phone) return res.status(404).json({error: 'Order details could not be verified.'});
+    res.locals.verifiedOrder = order;
+    next();
+  } catch { res.status(503).json({error: 'Order verification temporarily unavailable.'}); }
+}
+
 // Dedicated endpoint to send or resend order confirmation receipt email
-app.post("/api/order/send-receipt", async (req, res) => {
+app.post("/api/order/send-receipt", requireOrderPhone, async (req, res) => {
   try {
     const { orderId, email, order } = req.body;
-    let orderToUse = order;
+    let orderToUse = res.locals.verifiedOrder;
 
     if (!orderToUse && orderId) {
       orderToUse = await getOrderById(orderId);
@@ -1634,7 +1166,7 @@ app.post("/api/order/send-receipt", async (req, res) => {
     return res.status(500).json({
       success: false,
       delivered: false,
-      error: err.message || "Failed to dispatch email receipt"
+      error: "Failed to dispatch email receipt"
     });
   }
 });
@@ -1655,14 +1187,14 @@ app.post("/api/email/test-send", async (req, res) => {
       success: false,
       delivered: false,
       configured: isEmailServiceConfigured().configured,
-      error: err.message || "Exception testing email dispatch",
+      error: "Exception testing email dispatch",
       recipient: req.body?.email || "karpeter09@gmail.com"
     });
   }
 });
 
 // Endpoint to view or print the beautifully rendered HTML receipt directly
-app.get("/api/order/:id/receipt-html", async (req, res) => {
+app.get("/api/order/:id/receipt-html", requireOrderPhone, async (req, res) => {
   try {
     const orderId = req.params.id;
     let order = await getOrderById(orderId);
@@ -1681,7 +1213,7 @@ app.get("/api/order/:id/receipt-html", async (req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     return res.send(html);
   } catch (err: any) {
-    return res.status(500).send(`<h3>Error generating receipt: ${err.message}</h3>`);
+    return res.status(500).send("Unable to generate receipt.");
   }
 });
 
@@ -1713,7 +1245,7 @@ app.get("/api/email/status", (req, res) => {
   });
 });
 
-app.get("/api/order/:id", async (req, res) => {
+app.get("/api/order/:id", requireOrderPhone, async (req, res) => {
   const orderId = req.params.id;
   const numericIdStr = String(orderId).replace("BDEC-", "").trim();
   const numericId = parseInt(numericIdStr, 10);
@@ -1909,23 +1441,24 @@ app.post("/api/order/:id/status", async (req, res) => {
         delete updatePayload[match[1]];
       } else {
         console.error("Database status update error:", error);
-        return res.status(500).json({ error: error.message || "Failed to update order status in database" });
+        return res.status(500).json({ error: "Failed to update order status in database" });
       }
     }
 
     return res.json({ success: true, orderId: `BDEC-${numericId}`, status, updated });
   } catch (err: any) {
     console.error("Exception updating order status:", err);
-    return res.status(500).json({ error: err.message || "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
 app.post("/api/support/message", (req, res) => {
   const { sessionId, username, phone, text } = req.body;
-  if (!sessionId || !text) {
+  if (typeof sessionId !== 'string' || !/^[a-zA-Z0-9_-]{12,100}$/.test(sessionId) || typeof text !== 'string' || !text.trim() || text.length > 2000) {
     return res.status(400).json({ error: "SessionID and text is mandatory." });
   }
 
+  if (Object.keys(CHAT_SESSIONS).length >= 1000 && !CHAT_SESSIONS[sessionId]) return res.status(503).json({error: 'Support is busy. Please call us.'});
   if (!CHAT_SESSIONS[sessionId]) {
     CHAT_SESSIONS[sessionId] = {
       username: username || "Guest customer",
@@ -1941,6 +1474,7 @@ app.post("/api/support/message", (req, res) => {
     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   };
   session.messages.push(userMsg);
+  if (session.messages.length > 100) session.messages.splice(0, session.messages.length - 100);
 
   setTimeout(() => {
     let responseText = "Assalam-o-Alaikum! Thanks for contacting Babay Dee Atta Chakki support. Our team is available. Let us know if you need help with Atta, Rice and Herbs.";
@@ -1988,8 +1522,7 @@ app.get("/sitemap.xml", async (req, res) => {
       { path: "/?tab=shop", priority: "0.9", changefreq: "daily" },
       { path: "/?tab=categories", priority: "0.8", changefreq: "weekly" },
       { path: "/?tab=about", priority: "0.7", changefreq: "monthly" },
-      { path: "/?tab=contact", priority: "0.7", changefreq: "monthly" },
-      { path: "/?tab=tracker", priority: "0.8", changefreq: "daily" }
+      { path: "/?tab=contact", priority: "0.7", changefreq: "monthly" }
     ];
 
     const pList = await getSupabaseProducts();
@@ -2007,7 +1540,6 @@ app.get("/sitemap.xml", async (req, res) => {
     allUrls.forEach((entry) => {
       xmlContent += `  <url>\n`;
       xmlContent += `    <loc>${baseUrl}${entry.path}</loc>\n`;
-      xmlContent += `    <lastmod>${today}</lastmod>\n`;
       xmlContent += `    <changefreq>${entry.changefreq}</changefreq>\n`;
       xmlContent += `    <priority>${entry.priority}</priority>\n`;
       xmlContent += `  </url>\n`;

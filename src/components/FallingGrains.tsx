@@ -112,6 +112,7 @@ export function FallingGrains() {
     };
 
     const handleGrainRain = (e: Event) => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       const customEvent = e as CustomEvent;
       const detail = customEvent.detail || {};
       if (detail.type === "modal-open") {
@@ -224,4 +225,3 @@ export function FallingGrains() {
     />
   );
 }
-

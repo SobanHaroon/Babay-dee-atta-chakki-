@@ -26,6 +26,7 @@ export function GsapMagnetic({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce), (pointer: coarse)').matches) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       const rect = el.getBoundingClientRect();
@@ -59,6 +60,7 @@ export function GsapMagnetic({
     return () => {
       el.removeEventListener("mousemove", handleMouseMove);
       el.removeEventListener("mouseleave", handleMouseLeave);
+      gsap.killTweensOf(el);
     };
   }, [strength]);
 
@@ -152,6 +154,7 @@ export function triggerFlourParticleBurst(
   targetCartId: string = "floating-cart-btn"
 ) {
   if (typeof window === "undefined") return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   const startX = e.clientX;
   const startY = e.clientY;

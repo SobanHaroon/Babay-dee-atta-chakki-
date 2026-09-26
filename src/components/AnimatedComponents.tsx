@@ -335,6 +335,7 @@ export function AnimeHover3D({ children, className }: { children: React.ReactNod
     const rafRef = useRef<number | null>(null);
 
     const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (window.matchMedia('(prefers-reduced-motion: reduce), (pointer: coarse)').matches) return;
         if (!elRef.current) return;
         const clientX = e.clientX;
         const clientY = e.clientY;

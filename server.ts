@@ -5,7 +5,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import app from "./api/index.js";
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 async function startServer() {
   app.use(compression());
@@ -18,17 +18,20 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
+    const distPath = path.join(process.cwd(), "dist/client");
     app.use(express.static(distPath, {
-      maxAge: "1y",
+      dotfiles: "deny",
+      maxAge: "1d",
       immutable: true,
       setHeaders: (res, filePath) => {
+        if (filePath.includes(`${path.sep}assets${path.sep}`)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
         if (filePath.endsWith(".html")) {
           res.setHeader("Cache-Control", "no-cache, must-revalidate");
         }
       }
     }));
     app.get("*", (req, res) => {
+      if (req.path !== "/" && req.path !== "/index.html") return res.status(404).send("Page not found");
       res.sendFile(path.join(distPath, "index.html"));
     });
   }

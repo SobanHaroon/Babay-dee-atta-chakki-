@@ -4,11 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
+    "dev": "tsx watch server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:security": "node --import tsx --test scripts/security.test.ts",
+    "test:browser": "node scripts/verify-redesign.mjs",
+    "test:maps": "node --import tsx --test scripts/mapbox.test.ts",
+    "test:delivery": "node --import tsx --test scripts/delivery.test.ts",
+    "test:checkout": "node scripts/verify-checkout.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

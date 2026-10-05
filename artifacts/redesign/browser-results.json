@@ -1,0 +1,29 @@
+[
+  {
+    "width": 1440,
+    "noOverflow": true
+  },
+  {
+    "width": 768,
+    "noOverflow": true
+  },
+  {
+    "width": 390,
+    "noOverflow": true
+  },
+  {
+    "width": 320,
+    "noOverflow": true
+  },
+  {
+    "ambientPause": true
+  },
+  {
+    "scene": true,
+    "reducedMotion": true,
+    "shopNavigation": true,
+    "basketKeyboard": true,
+    "productDeepLink": true,
+    "runtimeErrors": []
+  }
+]

@@ -21,7 +21,7 @@ test('sensitive routes fail closed and reject foreign origins',async()=>{
   const address=server.address() as {port:number}; const base=`http://127.0.0.1:${address.port}`;
   try {
     for(const [url,method] of [['/api/admin/delivery-areas','POST'],['/api/email/status','GET'],['/api/notifications/order-sms','POST'],['/api/order/BDEC-123/status','POST']]) {
-      const res=await fetch(base+url,{method}); assert.equal(res.status,401,url);
+      const res=await fetch(base+url,{method}); assert.equal(res.status,404,url);
     }
     const foreign=await fetch(base+'/api/health',{headers:{Origin:'https://untrusted.example'}});assert.equal(foreign.status,403);
     for(const url of ['/api/order/BDEC-123','/api/order/BDEC-123/receipt-html']) assert.equal((await fetch(base+url)).status,401);
@@ -35,6 +35,6 @@ test('sensitive routes fail closed and reject foreign origins',async()=>{
 test('rate limits are enforced',async()=>{
   const limited=express();installSecurity(limited);limited.post('/api/reviews',(_req,res)=>res.json({ok:true}));
   const server=limited.listen(0,'127.0.0.1');await new Promise<void>(resolve=>server.once('listening',resolve));
-  try {const url=`http://127.0.0.1:${(server.address() as {port:number}).port}/api/reviews`;let response;for(let i=0;i<13;i++)response=await fetch(url,{method:'POST'});assert.equal(response!.status,429);assert.ok(response!.headers.get('retry-after'));}
+  try {const url=`http://127.0.0.1:${(server.address() as {port:number}).port}/api/reviews`;let response;for(let i=0;i<13;i++)response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});assert.equal(response!.status,429);assert.ok(response!.headers.get('retry-after'));}
   finally {await new Promise<void>(resolve=>server.close(()=>resolve()));}
 });

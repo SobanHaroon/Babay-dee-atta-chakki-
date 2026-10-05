@@ -1,3 +1,4 @@
+import { isPurchasable, productLabel } from "../lib/catalogPresentation";
 import React, { MouseEvent, useState, useRef, useEffect } from "react";
 import { Product } from "../types";
 import { triggerFlourParticleBurst } from "./GsapAnimations";
@@ -104,7 +105,7 @@ function ProductExpandedHoverCard({
         {product.productImage ? (
           <img
             src={product.productImage}
-            alt={product.name}
+            alt={productLabel(product)}
             className="w-full h-full object-cover object-center transition-transform duration-500 group-hover/banner:scale-105"
             loading="lazy"
             referrerPolicy="no-referrer"
@@ -149,7 +150,7 @@ function ProductExpandedHoverCard({
           {/* Title */}
           <div>
             <h3 className="text-white font-sans font-black text-sm sm:text-base tracking-tight uppercase leading-snug line-clamp-2">
-              {product.name}
+              {productLabel(product)}
             </h3>
           </div>
 
@@ -175,14 +176,14 @@ function ProductExpandedHoverCard({
           <div className="flex items-baseline justify-between py-1.5 px-3 bg-slate-800/40 rounded-xl border border-slate-700/50">
             <div className="flex items-baseline gap-1.5">
               <span className="text-base sm:text-lg font-black text-amber-400 font-mono tracking-tight">
-                Rs. {product.priceRange || (product.price ? product.price.toLocaleString() : "170")}
+                Rs. {product.priceRange || (product.price > 0 ? product.price.toLocaleString() : "Unavailable")}
               </span>
               <span className="text-xs font-bold text-slate-400">
                 / {product.unit || "Kg"}
               </span>
             </div>
 
-            {selectedQty > 1 && !product.outOfStock && (
+            {selectedQty > 1 && isPurchasable(product) && (
               <div className="text-right">
                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Total</span>
                 <span className="text-xs font-black text-emerald-400 font-mono">
@@ -193,7 +194,7 @@ function ProductExpandedHoverCard({
           </div>
 
           {/* Quantity Editor */}
-          {!product.outOfStock && (
+          {isPurchasable(product) && (
             <div
               onClick={(e) => e.stopPropagation()}
               className="space-y-1 bg-slate-800/20 p-2 rounded-xl border border-slate-700/40"
@@ -201,13 +202,13 @@ function ProductExpandedHoverCard({
               <div className="flex justify-between items-center text-[10px] text-slate-400">
                 <span className="font-semibold uppercase tracking-wider">Select Weight:</span>
                 <span className="font-mono font-bold text-amber-400">
-                  {displayFormattedQty(selectedQty, "Kg")}
+                  {displayFormattedQty(selectedQty, product.unit)}
                 </span>
               </div>
               <WeightQtyEditor
                 quantity={selectedQty}
                 onChange={setSelectedQty}
-                unit="Kg"
+                unit={product.unit}
               />
             </div>
           )}
@@ -215,12 +216,12 @@ function ProductExpandedHoverCard({
 
         {/* 3. Action Buttons & Inspection Hint */}
         <div className="space-y-2 pt-1 border-t border-slate-800">
-          {product.outOfStock ? (
+          {!isPurchasable(product) ? (
             <button
               disabled
               className="w-full py-2.5 bg-red-950/40 border border-red-500/20 text-red-400 text-xs font-black uppercase rounded-xl tracking-wider flex items-center justify-center gap-1.5 cursor-not-allowed"
             >
-              OUT OF STOCK
+              {product.catalogIssues?.length ? "DETAILS NEED CONFIRMATION" : "OUT OF STOCK"}
             </button>
           ) : (
             <button
@@ -335,7 +336,7 @@ export function ProductCard({
             )}
 
             {/* Floating Quick Add Button on Image for One-Tap Mobile Addition */}
-            {!product.outOfStock && (
+            {isPurchasable(product) && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -356,7 +357,7 @@ export function ProductCard({
             {product.productImage ? (
               <img
                 src={product.productImage}
-                alt={product.name}
+                alt={productLabel(product)}
                 loading="lazy"
                 decoding="async"
                 width="400"
@@ -382,9 +383,9 @@ export function ProductCard({
 
           {/* Badge & Category Indicator */}
           <div className="flex items-center justify-between gap-1.5 mb-1.5 min-h-[16px]">
-            {product.outOfStock ? (
+            {!isPurchasable(product) ? (
               <span className="bg-red-50 text-red-600 border border-red-200 text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded">
-                Out Of Stock
+                {product.catalogIssues?.length ? "Sale details unconfirmed" : "Out of stock"}
               </span>
             ) : product.badge ? (
               <span className="bg-amber-100 text-amber-900 border border-amber-300/80 text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded">
@@ -403,23 +404,23 @@ export function ProductCard({
               "font-sans font-black text-xs sm:text-sm tracking-tight uppercase line-clamp-2 min-h-[28px] sm:min-h-[36px] leading-tight mb-1.5 transition-colors duration-200",
               isHovered ? "text-amber-700" : "text-slate-900"
             )}
-            title={product.name}
+            title={productLabel(product)}
           >
-            {product.name}
+            {productLabel(product)}
           </h3>
 
           {/* Price Display */}
           <div className="flex items-baseline justify-between py-1 mb-1 border-y border-slate-100">
             <div className="flex items-baseline gap-1">
               <span className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                Rs. {product.priceRange || (product.price ? product.price.toLocaleString() : "170")}
+                Rs. {product.priceRange || (product.price > 0 ? product.price.toLocaleString() : "Unavailable")}
               </span>
               <span className="text-[11px] font-bold text-slate-500">
                 / {product.unit || "Kg"}
               </span>
             </div>
 
-            {selectedQty > 1 && !product.outOfStock && (
+            {selectedQty > 1 && isPurchasable(product) && (
               <div className="text-right">
                 <span className="text-[9px] text-slate-400 block font-bold uppercase tracking-wider">Subtotal</span>
                 <span className="text-xs font-black text-[#3b4414]">
@@ -430,7 +431,7 @@ export function ProductCard({
           </div>
 
           {/* Quantity Selector */}
-          {!product.outOfStock && (
+          {isPurchasable(product) && (
             <div
               onClick={(e) => e.stopPropagation()}
               className="mt-1.5 space-y-1 w-full max-w-full overflow-hidden"
@@ -438,30 +439,30 @@ export function ProductCard({
               <div className="flex justify-between items-center text-[10px] text-slate-500">
                 <span className="font-semibold">Quantity:</span>
                 <span className="font-mono font-bold text-slate-800">
-                  {displayFormattedQty(selectedQty, "Kg")}
+                  {displayFormattedQty(selectedQty, product.unit)}
                 </span>
               </div>
               <WeightQtyEditor
                 quantity={selectedQty}
                 onChange={setSelectedQty}
-                unit="Kg"
+                unit={product.unit}
               />
             </div>
           )}
         </div>
 
         {/* Add to Cart Button */}
-        {product.outOfStock ? (
+        {!isPurchasable(product) ? (
           <button
             disabled
             onClick={(e) => {
               e.stopPropagation();
             }}
             id={`add-to-cart-btn-${product.id}`}
-            aria-label={`${product.name} is out of stock`}
+            aria-label={`${productLabel(product)} is out of stock`}
             className="w-full mt-3 py-3 min-h-[48px] text-slate-400 bg-slate-100 text-xs font-bold uppercase rounded-xl tracking-wider flex items-center justify-center cursor-not-allowed border border-slate-200"
           >
-            OUT OF STOCK
+            {product.catalogIssues?.length ? "DETAILS NEED CONFIRMATION" : "OUT OF STOCK"}
           </button>
         ) : (
           <button
@@ -472,7 +473,7 @@ export function ProductCard({
               onAddToCart(product, selectedQty, e);
             }}
             id={`add-to-cart-btn-${product.id}`}
-            aria-label={`Add ${product.name} to cart`}
+            aria-label={`Add ${productLabel(product)} to cart`}
             className={cn(
               "add-to-basket-btn w-full mt-3 py-3 px-3.5 justify-between text-xs font-black uppercase rounded-xl tracking-wider transition-all duration-200 cursor-pointer shadow-sm active:scale-98",
               isHovered 

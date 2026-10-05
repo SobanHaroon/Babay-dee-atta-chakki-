@@ -1,15 +1,23 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
-import { deliveryFeeForRoute, drivingRoute, forwardMapbox, validCoordinates } from '../src/lib/mapbox.js';
-import { correctAddressText, normalizeAddressText as normalize, sectorId as sector, phaseId as phase, phasesAgree, localSector, houseNumber, streetNumber, significantWords, wordsAgree, namedRoad, localityQuery, lookupQueries, neighborhoodQuery, isSectorName } from './addressText.js';
+import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { validCoordinates } from '../src/lib/mapbox.js';
+import { geoapifySearch, geoapifyRoadDistance, DeliveryQuoteError, type ProviderPlace, type LookupStage } from './geoapify.js';
+import { correctAddressText, normalizeAddressText as normalize, sectorId as sector, phaseId as phase, phasesAgree, localSector, houseNumber, streetNumber, significantWords, wordsAgree, namedRoad, localityQuery, lookupQueries, neighborhoodQuery, isSectorName, withoutHouse } from './addressText.js';
 export { withoutHouse, localityQuery } from './addressText.js';
-
-export interface DeliverySettings { storeLatitude: number; storeLongitude: number; pricePerKm: number; maxDeliveryDistanceKm: number }
-export interface AddressMatch { latitude: number; longitude: number; matchedAddress: string; city: string; area: string; street: string; type: string; confidence: number; provider: string; houseNumber?: string; county?: string; name?: string; region?: string }
-export class DeliveryQuoteError extends Error { constructor(message: string, public status = 422) { super(message); } }
+export { DeliveryQuoteError } from './geoapify.js';
+export interface DeliverySettings {
+  storeLatitude:number;storeLongitude:number;pricePerKm:number;maxDeliveryDistanceKm:number;
+  minDeliveryFee?:number;feeRounding?:'nearest-rupee';pricingVersion?:string;
+  serviceRegion?:{south:number;west:number;north:number;east:number};
+  storeName?:string;storeAddress?:string;
+}
+export interface AddressMatch extends ProviderPlace {geocodedLatitude?:number;geocodedLongitude?:number;sourcePrecision?:string}
+export interface QuoteContext {checkoutContext?:string;addressVersion?:number;now?:number;requestId?:string;candidateToken?:string;confirmedPin?:{latitude:number;longitude:number}}
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export function validQuoteContext(context:QuoteContext){return typeof context.checkoutContext==='string'&&uuid.test(context.checkoutContext)&&Number.isSafeInteger(context.addressVersion)&&context.addressVersion!>=0;}
 function localityAgrees(address: string, candidate: AddressMatch, areaFallback=false): boolean {
   if (!validCoordinates(candidate.latitude,candidate.longitude)) return false;
   address=correctAddressText(address);
-  const context = correctAddressText([candidate.matchedAddress,candidate.city,candidate.area,candidate.county,candidate.region].filter(Boolean).join(' '));
+  const context = correctAddressText([candidate.name,candidate.matchedAddress,candidate.city,candidate.area,candidate.county,candidate.region].filter(Boolean).join(' '));
   // DHA II is mapped under Rawat despite customers using Islamabad. A specific
   // matching street/sector/phase is still required below; city names alone never qualify.
   if (/\b(?:islamabad|rawalpindi)\b/i.test(address) && !/\b(islamabad|rawalpindi|chaklala|rawat)\b/i.test(context)) return false;
@@ -26,7 +34,7 @@ function localityAgrees(address: string, candidate: AddressMatch, areaFallback=f
 }
 /** Match a mapped house/street without demanding optional words such as Housing Scheme. */
 export function matchAddress(address: string, candidate: AddressMatch): boolean {
-  if (!['building','street','address'].includes(candidate.type) || candidate.confidence < 0.4 || !localityAgrees(address,candidate)) return false;
+  if (!['building','street','address'].includes(candidate.type) || !localityAgrees(address,candidate)) return false;
   const requestedHouse=houseNumber(address);
   if(requestedHouse && candidate.houseNumber && ['building','address'].includes(candidate.type) && normalize(requestedHouse)!==normalize(candidate.houseNumber))return false;
   const requestedStreet=streetNumber(address);
@@ -50,7 +58,7 @@ export function matchLocality(address: string,candidate: AddressMatch): boolean 
   // Geoapify sometimes reports zero query confidence for an exactly named sector
   // or phase. Validate its actual identity instead; fuzzy names need confidence.
   const sameName=wanted.length>0 && wanted.every(w=>found.includes(w)) && (Boolean(exactLetter) || found.every(w=>wanted.includes(w)));
-  return sameName || (candidate.confidence>=0.5 && wordsAgree(wanted,found) && (Boolean(exactLetter) || wordsAgree(found,wanted)));
+  return sameName || ((candidate.confidence??0)>=0.5 && wordsAgree(wanted,found) && (Boolean(exactLetter) || wordsAgree(found,wanted)));
 }
 /** A named housing scheme is allowed; a generic city or a POI inside it is not. */
 export function matchNeighborhood(address:string,candidate:AddressMatch):boolean {
@@ -60,117 +68,149 @@ export function matchNeighborhood(address:string,candidate:AddressMatch):boolean
   const wanted=significantWords(query),found=significantWords(name);
   if(!wanted.length || !found.length || /\b(?:cantonment|district|capital territory)\b/i.test(name))return false;
   const exact=wanted.every(w=>found.includes(w)) && found.every(w=>wanted.includes(w));
-  return exact || (candidate.confidence>=0.5 && wordsAgree(wanted,found) && wordsAgree(found,wanted));
-}
-async function geoapifySearch(address: string,key: string,settings: DeliverySettings,locality=false): Promise<AddressMatch[]> {
-  const url=new URL('https://api.geoapify.com/v1/geocode/search');
-  const params:Record<string,string>={text:address,format:'json',limit:'10',lang:'en',filter:locality?`circle:${settings.storeLongitude},${settings.storeLatitude},${settings.maxDeliveryDistanceKm*1000}`:'countrycode:pk',bias:`proximity:${settings.storeLongitude},${settings.storeLatitude}`,apiKey:key};
-  if(locality)params.type='locality';
-  Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,v));
-  const res=await fetch(url,{signal:AbortSignal.timeout(6500)});
-  if(!res.ok)throw new DeliveryQuoteError('Address lookup is temporarily unavailable. Please try again.',503);
-  const data=await res.json();
-  return(data.results||[]).map((p:any)=>({latitude:p.lat,longitude:p.lon,matchedAddress:p.formatted||'',name:p.name||(p.formatted||'').split(',')[0],city:p.city||p.town||'',area:p.suburb||p.district||'',county:p.county||'',region:p.state_code==='IS'?'Islamabad Capital Territory':p.state||'',street:p.street||'',type:p.result_type==='building'&&(p.rank?.confidence_building_level??0)<0.8?'street':p.result_type,confidence:p.rank?.confidence??0,provider:'Geoapify',houseNumber:p.housenumber}));
-}
-export async function resolveDeliveryAddress(address: string,settings: DeliverySettings,mapboxToken: string): Promise<AddressMatch> {
-  const key=process.env.GEOAPIFY_GEOCODING_KEY||process.env.GEOAPIFY_API_KEY;
-  const queries=lookupQueries(address);
-  let responded=false;
-  const collect=async(jobs:Promise<AddressMatch[]>[])=>{
-    const settled=await Promise.allSettled(jobs);
-    return settled.flatMap(result=>{if(result.status==='fulfilled'){responded=true;return result.value;}return [];});
-  };
-  const mapboxSearch=async(query=queries.detailed)=>{
-    const results=await forwardMapbox(query,mapboxToken,{autocomplete:false,signal:AbortSignal.timeout(6500),proximity:{lat:settings.storeLatitude,lng:settings.storeLongitude}});
-    return results.map(p=>({latitude:p.lat,longitude:p.lng,matchedAddress:p.formatted,name:p.mainText,city:p.city,area:p.area,county:p.details.district,region:p.details.region,street:p.details.street||p.mainText,type:p.featureType,confidence:1,provider:'Mapbox',houseNumber:p.details.houseNumber}));
-  };
-  const bestStreet=(candidates:AddressMatch[])=>{
-    // An unlocated house can still match its street, but must not be labelled a house.
-    const matches=candidates.flatMap(p=>{
-      const precise=['address','building'].includes(p.type) && p.houseNumber && houseNumber(address) && normalize(p.houseNumber)===normalize(houseNumber(address)!);
-      const downgrade=!precise && (['address','building'].includes(p.type) || (p.type==='street' && p.houseNumber));
-      const c=downgrade?{...p,type:'street',houseNumber:undefined,matchedAddress:[p.street,p.area,p.city].filter(Boolean).join(', ')}:p;
-      return matchAddress(address,c)?[c]:[];
-    });
-    return matches.sort((a,b)=>Number(b.type!=='street')-Number(a.type!=='street') || b.confidence-a.confidence)[0];
-  };
-  // Two bounded batches instead of five sequential provider timeouts. Always
-  // prefer a house/street result before considering a sector or phase.
-  const candidates=await collect(key?[...new Set([queries.corrected,queries.detailed])].map(q=>geoapifySearch(q,key,settings)):[mapboxSearch()]);
-  const street=bestStreet(candidates);if(street)return street;
-  const fallbackJobs:Promise<AddressMatch[]>[]=[mapboxSearch(key?queries.detailed:queries.localityWithCity)];
-  if(key && queries.locality){
-    fallbackJobs.push(geoapifySearch(queries.specific,key,settings,true));
-    if(queries.specific!==queries.broad)fallbackJobs.push(geoapifySearch(queries.broad,key,settings,true));
-    fallbackJobs.push(geoapifySearch(queries.localityWithCity,key,settings));
-    if(queries.neighborhood && queries.neighborhood!==queries.specific)fallbackJobs.push(geoapifySearch(queries.neighborhood,key,settings,true));
-  }
-  candidates.push(...await collect(fallbackJobs));
-  const fallbackStreet=bestStreet(candidates);if(fallbackStreet)return fallbackStreet;
-  const areas=candidates.filter(p=>matchLocality(address,p)).sort((a,b)=>{
-    const precision=(p:AddressMatch)=>Number(Boolean(sector(p.name||'')===sector(address) && sector(address)))+Number(Boolean(localSector(address) && localSector(p.name||'')===localSector(address)));
-    return precision(b)-precision(a) || b.confidence-a.confidence;
-  });
-  const area=areas[0];
-  if(area){
-    const name=area.name||area.area;
-    const sectorMatch=Boolean(sector(address) || (localSector(address) && localSector(name)===localSector(address)));
-    const type=sectorMatch?'sector':'phase';
-    // A DHA phase result may be named after its representative point's sector.
-    // Label it using the matched phase, not a different customer sector.
-    const label=type==='phase' && phase(area.area)===phase(address)?area.area:name;
-    return{...area,type,area:label,matchedAddress:[label,area.county||area.city].filter(Boolean).join(', ')};
-  }
-  const neighborhood=candidates.filter(p=>matchNeighborhood(address,p)).sort((a,b)=>b.confidence-a.confidence)[0];
-  if(neighborhood)return{...neighborhood,type:'neighborhood',area:neighborhood.name||neighborhood.area,matchedAddress:[neighborhood.name||neighborhood.area,neighborhood.county||neighborhood.city].filter(Boolean).join(', ')};
-  throw new DeliveryQuoteError(responded?'We could not identify this street or neighbourhood. Include the housing scheme, sector or a nearby named road with your city, then calculate again.':'Address lookup is temporarily unavailable. Please try again.',responded?422:503);
+  return exact || ((candidate.confidence??0)>=0.5 && wordsAgree(wanted,found) && wordsAgree(found,wanted));
 }
 
-const instanceSecret = randomBytes(32).toString('hex');
-const quoteSecret = () => process.env.DELIVERY_QUOTE_SECRET || process.env.GEOAPIFY_GEOCODING_KEY || process.env.GEOAPIFY_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || instanceSecret;
-const signature = (payload: string) => createHmac('sha256',quoteSecret()).update(payload).digest();
-const settingsKey = (s: DeliverySettings) => [s.storeLatitude,s.storeLongitude,s.pricePerKm,s.maxDeliveryDistanceKm].join(':');
-export function signDeliveryQuote(quote: Record<string, unknown>, address: string, settings: DeliverySettings, now = Date.now()): string {
-  const payload = Buffer.from(JSON.stringify({...quote,address:address.trim(),settings:settingsKey(settings),expires:now+30*60*1000})).toString('base64url');
+const areaCache=new Map<string,{until:number;matches:AddressMatch[]}>();
+export function clearAddressCache(){areaCache.clear();}
+function candidateRank(p:AddressMatch,address:string) {
+  return ({building:50,address:50,street:40,sector:30,phase:20,neighborhood:10}[p.type]||0)
+    + (sector(address)&&sector(p.matchedAddress)===sector(address)?4:0)+(p.confidence??0);
+}
+function qualify(address:string,p:AddressMatch):AddressMatch|null {
+  if(matchAddress(address,p)){
+    const mappedHouse=['building','address'].includes(p.type)&&p.houseNumber&&houseNumber(address)&&normalize(p.houseNumber)===normalize(houseNumber(address)!)&&p.buildingConfidence!==undefined&&p.buildingConfidence>=0.8;
+    if(mappedHouse)return p;
+    return {...p,type:'street',houseNumber:undefined,matchedAddress:[p.street,p.area,p.city||p.county].filter(Boolean).join(', ')};
+  }
+  if(matchLocality(address,p)){
+    const name=p.name||p.area;
+    const isSector=Boolean(sector(name)||(localSector(address)&&localSector(name)===localSector(address)));
+    const label=!isSector&&phase(p.area)&&phasesAgree(phase(p.area),phase(address))?p.area:name;
+    return {...p,type:isSector?'sector':'phase',area:label,matchedAddress:[label,p.city||p.county].filter(Boolean).join(', ')};
+  }
+  if(matchNeighborhood(address,p))return {...p,type:'neighborhood',area:p.name||p.area,matchedAddress:[p.name||p.area,p.city||p.county].filter(Boolean).join(', ')};
+  return null;
+}
+/** Full original text first, then bounded premise/street/area fallbacks. City alone is never a fallback. */
+export function deliverySearchSequence(address:string):{text:string;stage:LookupStage}[]{
+  const q=lookupQueries(address),city=q.city;
+  const noStreet=q.detailed.replace(/\b(?:street|st|road|rd)[-.]?\s*(?:no\.?|number|#)?\s*\d+[a-z/-]*\b/gi,'').replace(/[,;]+/g,' ').replace(/\s+/g,' ').trim();
+  const options:{text:string;stage:LookupStage}[]=[{text:address.trim(),stage:'full'},{text:q.corrected,stage:'normalized'},{text:q.detailed,stage:'street'},
+    {text:[q.specific,city].filter(Boolean).join(', '),stage:'area'},
+    {text:noStreet,stage:'area'},
+    {text:[q.broad,city].filter(Boolean).join(', '),stage:'parent'},
+    {text:[q.neighborhood,city].filter(Boolean).join(', '),stage:'neighborhood'}];
+  const seen=new Set<string>();
+  return options.filter(p=>{const key=normalize(p.text);if(!key||seen.has(key)||(!significantWords(p.text).length&&!sector(p.text)))return false;seen.add(key);return true;}).slice(0,6);
+}
+export async function resolveDeliveryCandidates(address:string,settings:DeliverySettings,_mapboxToken='',requestId:string=randomUUID()):Promise<AddressMatch[]> {
+  const key=process.env.GEOAPIFY_GEOCODING_KEY||process.env.GEOAPIFY_API_KEY;
+  if(!key)throw new DeliveryQuoteError('Address lookup is not configured. Please contact the store or choose pickup.',503,'PROVIDER_CONFIGURATION');
+  const matches:AddressMatch[]=[];let providerFailure:DeliveryQuoteError|undefined;
+  const budget=AbortSignal.timeout(25000);
+  for(const query of deliverySearchSequence(address)){
+    // Cache only premise/street-free area lookups, never customer text, routes, prices or quotes.
+    const cacheable=['parent','neighborhood'].includes(query.stage)||query.stage==='area'&&!streetNumber(query.text)&&!namedRoad(query.text);
+    const cacheKey=createHash('sha256').update([query.text,settings.storeLatitude,settings.storeLongitude,key].join('|')).digest('hex');
+    const cached=cacheable?areaCache.get(cacheKey):undefined;
+    let candidates:AddressMatch[];
+    try {candidates=cached&&cached.until>Date.now()?cached.matches:await geoapifySearch(query.text,key,settings,query.stage,requestId,budget);}
+    catch(error){
+      if(error instanceof DeliveryQuoteError&&['PROVIDER_TIMEOUT','PROVIDER_UNAVAILABLE'].includes(error.code)){
+        providerFailure=error;if(budget.aborted)break;continue;
+      }
+      throw error;
+    }
+    if(cacheable&&(!cached||cached.until<=Date.now())){if(areaCache.size>=100)areaCache.delete(areaCache.keys().next().value!);areaCache.set(cacheKey,{until:Date.now()+300000,matches:candidates});}
+    matches.push(...candidates.flatMap(p=>{const c=qualify(address,p);return c?[c]:[];}));
+    if(matches.some(p=>['building','address'].includes(p.type)))break;
+    // A consistent street is already the best available fallback; avoid redundant area calls.
+    if(matches.some(p=>p.type==='street'))break;
+    if(['area','parent','neighborhood'].includes(query.stage)&&matches.some(p=>['sector','phase','neighborhood'].includes(p.type)))break;
+  }
+  const unique=[...new Map(matches.map(p=>[`${p.latitude}:${p.longitude}:${p.type}`,p])).values()];
+  unique.sort((a,b)=>candidateRank(b,address)-candidateRank(a,address));
+  if(!unique.length&&providerFailure)throw providerFailure;
+  if(!unique.length)throw new DeliveryQuoteError('We could not identify this street or neighbourhood. Include the housing scheme, sector or a nearby named road with your city. You can also choose pickup.',422,'ADDRESS_NOT_FOUND');
+  return unique.slice(0,3);
+}
+export async function resolveDeliveryAddress(address:string,settings:DeliverySettings,mapboxToken=''){return (await resolveDeliveryCandidates(address,settings,mapboxToken))[0];}
+
+const instanceSecret=randomBytes(32).toString('hex');
+function quoteSecret(){
+  const secret=process.env.DELIVERY_QUOTE_SECRET;
+  if(secret&&secret.length>=32)return secret;
+  if(process.env.NODE_ENV==='production')throw new DeliveryQuoteError('Delivery quotes are not configured. Please contact the store or choose pickup.',503,'QUOTE_CONFIGURATION');
+  return instanceSecret;
+}
+const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
+const signature=(payload:string)=>createHmac('sha256',quoteSecret()).update(payload).digest();
+const settingsKey=(s:DeliverySettings)=>hash(JSON.stringify([s.storeLatitude,s.storeLongitude,s.pricePerKm,s.maxDeliveryDistanceKm,s.minDeliveryFee??50,s.feeRounding??'nearest-rupee',s.pricingVersion??'existing-50km-v1',s.serviceRegion??null]));
+export function deliveryFee(distanceKm:number,s:DeliverySettings){return Math.max(s.minDeliveryFee??50,Math.round(distanceKm*s.pricePerKm));}
+export function destinationInRegion(latitude:number,longitude:number,s:DeliverySettings){
+  if(!validCoordinates(latitude,longitude))return false;
+  const b=s.serviceRegion;
+  if(!b)return process.env.NODE_ENV!=='production';
+  return latitude>=b.south&&latitude<=b.north&&longitude>=b.west&&longitude<=b.east;
+}
+function assertDestination(latitude:number,longitude:number,s:DeliverySettings){
+  if(!destinationInRegion(latitude,longitude,s))throw new DeliveryQuoteError('This location is outside our configured delivery area. Please choose store pickup.',422,'OUT_OF_AREA');
+}
+export function signDeliveryQuote(quote:Record<string,unknown>,address:string,settings:DeliverySettings,now=Date.now(),context:QuoteContext={}){
+  if(process.env.NODE_ENV==='production'&&!validQuoteContext(context))throw new DeliveryQuoteError('Please start a new checkout and calculate delivery again.',400,'INVALID_CONTEXT');
+  const payload=Buffer.from(JSON.stringify({v:2,latitude:quote.latitude,longitude:quote.longitude,distanceKm:quote.distanceKm,deliveryCharge:quote.deliveryCharge,type:quote.type,matchedAddress:quote.matchedAddress,city:quote.city,area:quote.area,geocodedLatitude:quote.geocodedLatitude,geocodedLongitude:quote.geocodedLongitude,sourcePrecision:quote.sourcePrecision,
+    addressHash:hash(address.trim()),settings:settingsKey(settings),checkoutContext:context.checkoutContext,addressVersion:context.addressVersion,issuedAt:now,expires:now+10*60*1000})).toString('base64url');
   return payload+'.'+signature(payload).toString('base64url');
 }
-export function verifyDeliveryQuote(token: unknown, address: string, settings: DeliverySettings, now = Date.now()) {
-  const invalid = () => new DeliveryQuoteError('Please calculate delivery charges again before placing your order.',409);
-  if (typeof token !== 'string' || token.length > 6000) throw invalid();
-  const [payload,sig,...extra] = token.split('.');
-  if (!payload || !sig || extra.length) throw invalid();
-  const actual = Buffer.from(sig,'base64url'), expected = signature(payload);
-  if (actual.length !== expected.length || !timingSafeEqual(actual,expected)) throw invalid();
-  let quote: any; try {quote = JSON.parse(Buffer.from(payload,'base64url').toString());} catch {throw invalid();}
-  if (quote.address !== address.trim() || quote.settings !== settingsKey(settings) || !Number.isFinite(quote.expires) || quote.expires <= now || !validCoordinates(quote.latitude,quote.longitude) || !Number.isFinite(quote.distanceKm) || quote.distanceKm < 0 || quote.distanceKm > settings.maxDeliveryDistanceKm || quote.deliveryCharge !== deliveryFeeForRoute(quote.distanceKm,settings.pricePerKm)) throw invalid();
-  return quote;
+export function verifyDeliveryQuote(token:unknown,address:string,settings:DeliverySettings,nowOrContext:number|QuoteContext=Date.now()) {
+  const options=typeof nowOrContext==='number'?{}:nowOrContext,now=typeof nowOrContext==='number'?nowOrContext:nowOrContext.now??Date.now();
+  const invalid=()=>new DeliveryQuoteError('Please calculate delivery charges again before placing your order.',409,'INVALID_QUOTE');
+  if(typeof token!=='string'||token.length>6000)throw invalid();
+  const [payload,sig,...extra]=token.split('.');if(!payload||!sig||extra.length)throw invalid();
+  const actual=Buffer.from(sig,'base64url'),expected=signature(payload);
+  if(actual.length!==expected.length||!timingSafeEqual(actual,expected))throw invalid();
+  let q:any;try{q=JSON.parse(Buffer.from(payload,'base64url').toString());}catch{throw invalid();}
+  if(q.v!==2||q.addressHash!==hash(address.trim())||q.settings!==settingsKey(settings)||!Number.isFinite(q.issuedAt)||q.issuedAt>now||!Number.isFinite(q.expires)||q.expires<=now||q.expires-q.issuedAt>600000||
+    !destinationInRegion(q.latitude,q.longitude,settings)||!Number.isFinite(q.distanceKm)||q.distanceKm<0||q.distanceKm>settings.maxDeliveryDistanceKm||q.deliveryCharge!==deliveryFee(q.distanceKm,settings))throw invalid();
+  if(q.checkoutContext!==undefined&&(!validQuoteContext(options)||q.checkoutContext!==options.checkoutContext||q.addressVersion!==options.addressVersion))throw invalid();
+  if(process.env.NODE_ENV==='production'&&!validQuoteContext(options))throw invalid();
+  return q;
 }
-
-async function deliveryRoute(settings: DeliverySettings,match: AddressMatch,mapboxToken:string) {
-  try {
-    return await drivingRoute(settings.storeLatitude,settings.storeLongitude,match.latitude,match.longitude,mapboxToken,{signal:AbortSignal.timeout(6500),radiusMeters:['sector','phase','neighborhood'].includes(match.type)?1000:100});
-  } catch {
-    const key=process.env.GEOAPIFY_ROUTING_KEY||process.env.GEOAPIFY_API_KEY||process.env.GEOAPIFY_GEOCODING_KEY;
-    if(key){
-      try {
-        const url=new URL('https://api.geoapify.com/v1/routing');
-        Object.entries({waypoints:`${settings.storeLatitude},${settings.storeLongitude}|${match.latitude},${match.longitude}`,mode:'drive',units:'metric',apiKey:key}).forEach(([k,v])=>url.searchParams.set(k,v));
-        const response=await fetch(url,{signal:AbortSignal.timeout(6500)});
-        if(!response.ok)throw new Error('Routing unavailable');
-        const data=await response.json(),route=data.features?.[0]?.properties;
-        if(!route || !Number.isFinite(route.distance) || route.distance<0 || !Number.isFinite(route.time))throw new Error('Invalid road distance');
-        return {distanceKm:route.distance/1000};
-      }catch{}
+function signCandidate(candidate:AddressMatch,address:string,settings:DeliverySettings,context:QuoteContext){
+  const payload=Buffer.from(JSON.stringify({kind:'candidate',candidate,addressHash:hash(address.trim()),checkoutContext:context.checkoutContext,settings:settingsKey(settings),expires:Date.now()+600000})).toString('base64url');
+  return payload+'.'+signature(payload).toString('base64url');
+}
+function readCandidate(token:string,address:string,settings:DeliverySettings,context:QuoteContext):AddressMatch{
+  const invalid=()=>new DeliveryQuoteError('The matched location expired or changed. Look up the address again before confirming your pin.',409,'INVALID_CANDIDATE');
+  if(typeof token!=='string'||token.length>8000)throw invalid();
+  const [payload,sig,...extra]=token.split('.');if(!payload||!sig||extra.length)throw invalid();
+  const actual=Buffer.from(sig,'base64url'),expected=signature(payload);
+  if(actual.length!==expected.length||!timingSafeEqual(actual,expected))throw invalid();
+  let c:any;try{c=JSON.parse(Buffer.from(payload,'base64url').toString());}catch{throw invalid();}
+  if(c.kind!=='candidate'||c.addressHash!==hash(address.trim())||c.checkoutContext!==context.checkoutContext||c.settings!==settingsKey(settings)||!Number.isFinite(c.expires)||c.expires<=Date.now())throw invalid();
+  return c.candidate;
+}
+export async function createDeliveryQuote(address:unknown,settings:DeliverySettings,mapboxToken='',options:QuoteContext={}) {
+  if(typeof address!=='string'||address.trim().length<12||address.length>600)throw new DeliveryQuoteError('Enter your complete address, including street, area and city.',400,'INVALID_ADDRESS');
+  if(process.env.NODE_ENV==='production'&&!validQuoteContext(options))throw new DeliveryQuoteError('Please start a new checkout and calculate delivery again.',400,'INVALID_CONTEXT');
+  const requestId=options.requestId||randomUUID();let match:AddressMatch;
+  if(options.confirmedPin){
+    const p=options.confirmedPin;assertDestination(p.latitude,p.longitude,settings);
+    const candidate=options.candidateToken?readCandidate(options.candidateToken,address,settings,options):undefined;
+    match={...p,matchedAddress:candidate?.matchedAddress||'Customer-confirmed map pin',type:'pin',city:candidate?.city||'',area:candidate?.area||'',street:candidate?.street||'',geocodedLatitude:candidate?.latitude,geocodedLongitude:candidate?.longitude,sourcePrecision:candidate?.type,provider:'Customer pin'};
+  }else{
+    const candidates=await resolveDeliveryCandidates(address,settings,mapboxToken,requestId);match=candidates[0];
+    assertDestination(match.latitude,match.longitude,settings);
+    if(!['building','address'].includes(match.type)){
+      const optionsWithTokens=candidates.map(p=>({...p,precision:p.type,candidateToken:signCandidate(p,address,settings,options)}));
+      return {success:true,requiresPinConfirmation:true as const,requestId,candidate:optionsWithTokens[0],candidates:optionsWithTokens,checkoutContext:options.checkoutContext,addressVersion:options.addressVersion};
     }
-    throw new DeliveryQuoteError('We found the location but could not calculate its driving distance. Please try Calculate delivery charges again.',503);
   }
-}
-
-export async function createDeliveryQuote(address: unknown, settings: DeliverySettings, mapboxToken: string) {
-  if (typeof address !== 'string' || address.trim().length < 12 || address.length > 600) throw new DeliveryQuoteError('Enter your complete address, including street, area and city.',400);
-  const match = await resolveDeliveryAddress(address.trim(),settings,mapboxToken);
-  const route = await deliveryRoute(settings,match,mapboxToken);
-  if (route.distanceKm > settings.maxDeliveryDistanceKm) throw new DeliveryQuoteError(`This address is ${route.distanceKm.toFixed(2)} km away by road. We deliver within ${settings.maxDeliveryDistanceKm} km. You can choose store pickup.`);
-  const quote = { success:true,deliverable:true,...match,distanceKm:route.distanceKm,deliveryCharge:deliveryFeeForRoute(route.distanceKm,settings.pricePerKm),pricePerKm:settings.pricePerKm };
-  return {...quote,quoteToken:signDeliveryQuote(quote,address,settings)};
+  const route=await geoapifyRoadDistance(settings,match,requestId);
+  if(route.distanceKm>settings.maxDeliveryDistanceKm)throw new DeliveryQuoteError(`This location is ${route.distanceKm.toFixed(2)} km away by road. We deliver within ${settings.maxDeliveryDistanceKm} km. You can choose store pickup.`,422,'DISTANCE_LIMIT');
+  const now=options.now??Date.now();
+  const quote={success:true,deliverable:true,requiresPinConfirmation:false as const,...match,...route,deliveryCharge:deliveryFee(route.distanceKm,settings),pricePerKm:settings.pricePerKm,
+    expiresAt:now+600000,checkoutContext:options.checkoutContext,addressVersion:options.addressVersion,requestId};
+  return {...quote,quoteToken:signDeliveryQuote(quote,address,settings,now,options)};
 }

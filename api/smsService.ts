@@ -107,7 +107,7 @@ function getTwilioClient(): ReturnType<typeof twilio> | null {
     try {
       twilioClientInstance = twilio(accountSid, authToken);
     } catch (err) {
-      console.error("[Twilio SMS] Failed to initialize Twilio client:", err);
+      console.error(JSON.stringify({event:'sms_delivery_error'}));
       return null;
     }
   }
@@ -373,7 +373,7 @@ export async function sendOrderConfirmationSMS(order: any): Promise<{
       });
 
       if (smspkResult.success && smspkResult.delivered) {
-        console.log(`[SMS Gateway] Order confirmation successfully sent via SMSPK to ${smspkPhone} for Order #${order.id}`);
+        console.log(JSON.stringify({event:'sms_delivery_status'}));
         return {
           success: true,
           messageId: smspkResult.messageId,
@@ -382,7 +382,7 @@ export async function sendOrderConfirmationSMS(order: any): Promise<{
           message: "SMS sent via SMSPK gateway",
         };
       } else if (smspkResult.simulated) {
-        console.log(`[SMS Gateway] Order confirmation SMS processed in simulation mode for Order #${order.id}`);
+        console.log(JSON.stringify({event:'sms_delivery_status'}));
       }
     } catch {
       // Continue to Twilio or simulation fallback
@@ -409,9 +409,7 @@ export async function sendOrderConfirmationSMS(order: any): Promise<{
 
       const message = await twilioClient.messages.create(messageOptions);
 
-      console.log(
-        `[Twilio SMS] Confirmation SMS successfully dispatched for Order #${order.id} to ${normalizedPhone} (Twilio SID: ${message.sid}, Status: ${message.status})`
-      );
+      console.log(JSON.stringify({event:'sms_delivery_status'}));
 
       return {
         success: true,

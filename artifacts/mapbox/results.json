@@ -1,0 +1,11 @@
+{
+  "passed": [
+    "no default customer pin",
+    "autocomplete selection and details",
+    "drag coordinates",
+    "fresh GPS and accuracy",
+    "route error clears fee"
+  ],
+  "routes": 6,
+  "consoleErrors": []
+}

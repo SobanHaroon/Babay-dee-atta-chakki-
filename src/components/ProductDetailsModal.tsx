@@ -1,3 +1,4 @@
+import { isPurchasable, productLabel } from "../lib/catalogPresentation";
 import React, { useState, useEffect, useRef } from "react";
 import { Product } from "../types";
 import { Star, X, ShoppingCart, Sparkles, Share2, ChevronLeft, ChevronRight } from "lucide-react";
@@ -33,6 +34,7 @@ export function ProductDetailsModal({
 }: ProductDetailsModalProps) {
   useDialogFocus(true, '#product-details-container', onClose);
   const [quantity, setQuantity] = useState(1);
+  useEffect(() => setQuantity(1), [product.id, product.unit]);
   const [activeDetailTab, setActiveDetailTab] = useState<"specs" | "nutrition">("specs");
 
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -123,7 +125,7 @@ export function ProductDetailsModal({
   }, [product.id]);
 
   const handleShareProduct = () => {
-    const text = `Check out this premium *${product.name}* at Babay Dee Chakki!\nPrice: Rs. ${product.price} per ${product.unit}\n\n100% Traditional, Stone-Ground & Pure. Order Yours Now!`;
+    const text = `Check out this premium *${productLabel(product)}* at Babay Dee Chakki!\nPrice: Rs. ${product.price} per ${product.unit}\n\n100% Traditional, Stone-Ground & Pure. Order Yours Now!`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(whatsappUrl, "_blank");
   };
@@ -159,7 +161,7 @@ export function ProductDetailsModal({
         id="product-details-container"
         role="dialog"
         aria-modal="true"
-        aria-label={product.name}
+        aria-label={productLabel(product)}
         tabIndex={-1}
         className="product-overview-component bg-[#171412] text-slate-900 w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden relative max-h-[92vh] flex flex-col md:flex-row border border-amber-900/30 select-none"
       >
@@ -277,18 +279,10 @@ export function ProductDetailsModal({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                 <div>
                   <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight uppercase">
-                    {product.name}
+                    {productLabel(product)}
                   </h2>
-                  {/* Rating Star Badge */}
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <div className="flex text-amber-400">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-3.5 h-3.5 fill-amber-400 stroke-amber-500" />
-                      ))}
-                    </div>
-                    <span className="text-xs font-black text-slate-800">4.9</span>
-                    <span className="text-xs text-slate-400 font-medium">(120+ Verified Buyers)</span>
-                  </div>
+                  {product.packWeightKg != null && <p className="text-xs text-slate-500 mt-2">Pack weight: {product.packWeightKg} Kg</p>}
+                  {product.purchasable === false && <p className="text-xs text-amber-800 mt-2" role="status">Sale details need confirmation. Please contact the store.</p>}
                 </div>
 
                 {/* Price Badge */}
@@ -296,7 +290,7 @@ export function ProductDetailsModal({
                   <span className="text-[9px] text-amber-800 font-bold uppercase tracking-wider block">Price per {product.unit || "Kg"}</span>
                   <div className="flex items-baseline gap-1 justify-center">
                     <span className="text-xl sm:text-2xl font-black text-amber-700 font-mono">
-                      Rs. {product.priceRange || (product.price ? product.price.toLocaleString() : "170")}
+                      Rs. {product.priceRange || (product.price > 0 ? product.price.toLocaleString() : "Unavailable")}
                     </span>
                     <span className="text-xs text-amber-800 font-bold">/ {product.unit || "Kg"}</span>
                   </div>
@@ -395,7 +389,7 @@ export function ProductDetailsModal({
 
             {/* Quantity Selector & Main Actions Block */}
             <div className="flex flex-col gap-3.5 bg-slate-50/90 border border-slate-200/70 rounded-2xl p-4">
-              {!product.outOfStock && (
+              {isPurchasable(product) && (
                 <div className="w-full">
                   <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1.5">
                     Select Weight / Quantity:
@@ -410,13 +404,13 @@ export function ProductDetailsModal({
 
               {/* Action Buttons Row */}
               <div className="flex items-center gap-2.5 w-full">
-                {product.outOfStock ? (
+                {!isPurchasable(product) ? (
                   <button
                     disabled
                     id="modal-add-to-cart-btn"
                     className="flex-1 bg-red-50 text-red-600 border border-red-200 font-bold px-6 py-3.5 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed h-12 text-xs uppercase tracking-wider"
                   >
-                    <span>OUT OF STOCK</span>
+                    <span>{product.outOfStock ? "OUT OF STOCK" : "DETAILS NEED CONFIRMATION"}</span>
                   </button>
                 ) : (
                   <button

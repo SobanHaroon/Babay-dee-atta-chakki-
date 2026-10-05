@@ -16,6 +16,7 @@ export function ReviewsSection({ reviews, onAddReview, isLoading }: ReviewsSecti
   const [formCity, setFormCity] = useState("Islamabad");
   const [formText, setFormText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
 
   const reviewsContainerRef = useRef<HTMLDivElement>(null);
@@ -67,12 +68,14 @@ export function ReviewsSection({ reviews, onAddReview, isLoading }: ReviewsSecti
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName.trim() || !formText.trim()) return;
+    setSubmitError("");
+    if (formName.trim().length < 2 || formText.trim().length < 10) { setSubmitError("Please enter your name and at least 10 characters of feedback."); return; }
 
     setIsSubmitting(true);
     try {
       const response = await fetch("/api/reviews", {
         method: "POST",
+        signal: AbortSignal.timeout(15000),
         headers: {
           "Content-Type": "application/json",
         },
@@ -84,19 +87,11 @@ export function ReviewsSection({ reviews, onAddReview, isLoading }: ReviewsSecti
         }),
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.review) {
-          onAddReview(result.review);
-          setFormName("");
-          setFormText("");
-          setFormRating(5);
-          setShowSuccess(true);
-          setTimeout(() => setShowSuccess(false), 4500);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to post consumer review:", err);
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) throw new Error(result.error || "Your review could not be submitted. Please try again.");
+      setFormName(""); setFormText(""); setFormRating(5); setShowSuccess(true);
+    } catch (err: any) {
+      setSubmitError(err.message || "Connection failed. Your review has not been submitted.");
     } finally {
       setIsSubmitting(false);
     }
@@ -108,13 +103,13 @@ export function ReviewsSection({ reviews, onAddReview, isLoading }: ReviewsSecti
         {/* Header */}
         <div className="text-center max-w-xl mx-auto mb-10">
           <span className="text-xs font-mono font-bold uppercase tracking-widest text-blue-600">
-            Real Customer Sentiment
+            FROM OUR CUSTOMERS
           </span>
           <h2 className="text-2xl font-bold text-slate-800 tracking-tight mt-1">
-            Verified Customer Reviews
+            Customer Reviews
           </h2>
           <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-            Read transparent opinions left by local households in Rawalpindi and Islamabad. 100% authentic ratings based on actual product shipments.
+            Read feedback from our customers. Verified purchase labels appear only when a completed purchase has been confirmed.
           </p>
         </div>
 
@@ -131,7 +126,7 @@ export function ReviewsSection({ reviews, onAddReview, isLoading }: ReviewsSecti
                 <CheckCircle className="w-8 h-8 text-green-600 mx-auto" />
                 <h4 className="font-bold text-green-800 text-sm">Review Submitted!</h4>
                 <p className="text-xs text-green-600 leading-normal">
-                  Your feedback has been saved and posted immediately. Thank you for supporting local businesses like Babay Dee!
+                  Your feedback has been submitted for moderation. It will appear after approval. Thank you for supporting Babay Dee.
                 </p>
               </div>
             ) : (
@@ -145,6 +140,8 @@ export function ReviewsSection({ reviews, onAddReview, isLoading }: ReviewsSecti
                     id="rev-form-name"
                     type="text"
                     required
+                    minLength={2}
+                    maxLength={80}
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
                     placeholder="e.g. Ch. Mohammad Asif"
@@ -197,6 +194,8 @@ export function ReviewsSection({ reviews, onAddReview, isLoading }: ReviewsSecti
                     id="rev-form-text"
                     required
                     rows={4}
+                    minLength={10}
+                    maxLength={2000}
                     value={formText}
                     onChange={(e) => setFormText(e.target.value)}
                     placeholder="How is our flour purity, smell, milling and packing? Let other local families know..."
@@ -204,6 +203,7 @@ export function ReviewsSection({ reviews, onAddReview, isLoading }: ReviewsSecti
                   />
                 </div>
 
+                {submitError && <p role="alert" className="text-sm text-red-700">{submitError}</p>}
                 {/* Submit */}
                 <button
                   type="submit"
@@ -211,7 +211,7 @@ export function ReviewsSection({ reviews, onAddReview, isLoading }: ReviewsSecti
                   id="submit-review-btn"
                   className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-bold text-xs py-3 rounded-lg shadow-sm hover:shadow-md cursor-pointer transition-all uppercase tracking-wider"
                 >
-                  {isSubmitting ? "Submitting..." : "Publish Review"}
+                  {isSubmitting ? "Submitting..." : "Submit for review"}
                 </button>
               </form>
             )}
@@ -233,7 +233,7 @@ export function ReviewsSection({ reviews, onAddReview, isLoading }: ReviewsSecti
                 No reviews found. Be the first to leave one!
               </div>
             ) : (
-              reviews.map((rev) => (
+              reviews.filter(rev => rev.status !== "pending" && rev.status !== "rejected" && !rev.isSynthetic).map((rev) => (
                 <AnimeHover3D key={rev.id}>
                   <div
                     id={`review-item-${rev.id}`}
@@ -243,9 +243,9 @@ export function ReviewsSection({ reviews, onAddReview, isLoading }: ReviewsSecti
                       <div>
                         <h4 className="font-sans font-bold text-slate-800 text-sm flex items-center gap-1.5">
                           <span>{rev.name}</span>
-                          <span className="cinematic-surface inline-flex items-center gap-0.5 bg-blue-50 text-blue-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full">
-                            <UserCheck className="w-2.5 h-2.5" /> Verified
-                          </span>
+                          {rev.verifiedPurchase === true && <span className="cinematic-surface inline-flex items-center gap-0.5 bg-blue-50 text-blue-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                            <UserCheck className="w-2.5 h-2.5" /> Verified purchase
+                          </span>}
                         </h4>
                         <span className="text-[10px] font-mono font-semibold text-slate-400 uppercase tracking-wider mt-0.5 block">
                           {rev.city} • {rev.date}

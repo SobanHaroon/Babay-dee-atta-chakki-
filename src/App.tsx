@@ -1,3 +1,4 @@
+import { PolicyLinks } from "./components/PolicyLinks";
 import { CheckoutConfirmation } from "./components/CheckoutConfirmation";
 import { pakistanDateKey, upcomingDeliveryDays, formatRupees } from "./lib/commerce";
 /**
@@ -55,9 +56,10 @@ import { FlipText, AnimatedNumber, AnimatedScore, AnimeScrollReveal } from "./co
 import { GsapMagnetic, GsapScrollReveal, GsapTopProgressBar, GsapCounter } from "./components/GsapAnimations";
 import { Logo } from "./components/Logo";
 import { generateProductJsonLd, generateBreadcrumbJsonLd, injectJsonLdScript, removeJsonLdScript } from "./lib/jsonLd";
-import { fetchProductsFromSupabaseDirectly } from "./lib/supabaseProducts";
+import { cartFromProduct, isPurchasable, productLabel, quantityIsAllowed } from "./lib/catalogPresentation";
+import { rememberOrderAccess } from "./lib/orderAccess";
 
-import { supabase } from "./lib/supabaseClient";
+
 import { motion, AnimatePresence } from "motion/react";
 import { animate } from "animejs";
 import { useToast } from "./components/ToastContainer";
@@ -109,7 +111,7 @@ export const STORE_ACCOUNT_TITLE = "";    // e.g., "Babay Dee Atta Chakki"
 export const STORE_ACCOUNT_NUMBER = "";   // e.g., "1204817293847291"
 export const STORE_IBAN = "";             // e.g., "PK41MEZN0012048172938472"
 
-// Initialize Supabase Client is imported from ./lib/supabaseClient
+
 
 
 // Seamless Native-App Page Transition Variants for Main Tab Switching
@@ -159,6 +161,8 @@ export default function App() {
 
   // Loading indicators
   const [isLoading, setIsLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState("");
+  const checkoutAttempt = useRef<{fingerprint: string; key: string} | null>(null);
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(location.search).get('q') || '');
@@ -210,7 +214,8 @@ export default function App() {
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem("babay_dee_cart");
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed.filter(item => item && typeof item.id === "string" && Number.isFinite(item.quantity) && item.quantity > 0) : [];
     } catch (e) {
       console.error("Failed to parse cart items from localStorage:", e);
       return [];
@@ -221,10 +226,10 @@ export default function App() {
   const [selectedArea, setSelectedArea] = useState("Islamabad"); // default delivery town, Rawalpindi alternative
   const [selectedSubLocation, setSelectedSubLocation] = useState<string>("Sector I-8 / I-9");
   const [customDistanceKm, setCustomDistanceKm] = useState<number>(12);
-  
+
   // Modals / Overlays
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  
+
   // Fulfillment option: Delivery vs Store Pick Up
   const [fulfillmentType, setFulfillmentType] = useState<"delivery" | "pickup">("delivery");
 
@@ -247,6 +252,9 @@ export default function App() {
     phone: typeof window !== "undefined" ? localStorage.getItem("customer_phone") || "" : "",
     email: typeof window !== "undefined" ? localStorage.getItem("customer_email") || "" : "",
     address: "",
+    checkoutContext: crypto.randomUUID(),
+    addressVersion: 0,
+    quoteExpiresAt: 0,
     deliveryQuotedAddress: "",
     deliveryQuoteToken: "",
     matchedAddress: "",
@@ -280,130 +288,35 @@ export default function App() {
       }
     }
 
-    const fetchData = async () => {
-      setIsLoading(true);
-      const fetchSafe = async (url: string) => {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3500);
-          const res = await fetch(url, { signal: controller.signal });
-          clearTimeout(timeoutId);
-          if (res.ok) {
-            return await res.json();
-          }
-        } catch (e) {
-          console.warn(`Resilient recovery: fetch failed or timed out for ${url}`, e);
-        }
-        return null;
+    const controller = new AbortController();
+    let fetching = false;
+    const loadCatalog = async (initial = false) => {
+      if (fetching || (!initial && document.hidden)) return;
+      fetching = true;
+      const fetchJson = async (url: string) => {
+        const response = await fetch(url, {signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12000)])});
+        if (!response.ok) throw new Error("The catalogue is temporarily unavailable. Please retry shortly.");
+        return response.json();
       };
-
       try {
-        const [cats, prods, feat, pop, revs] = await Promise.all([
-          fetchSafe("/api/categories"),
-          fetchSafe("/api/products"),
-          fetchSafe("/api/featured-products"),
-          fetchSafe("/api/popular-products"),
-          fetchSafe("/api/reviews")
-        ]);
-
-        if (cats && Array.isArray(cats) && cats.length > 0) setCategories(cats);
-        else setCategories(DEFAULT_CATEGORIES);
-        if (revs && Array.isArray(revs)) setReviews(revs);
-
-        // If backend API succeeded and returned products
-        if (prods && Array.isArray(prods) && prods.length > 0) {
-          setProducts(prods);
-          if (feat && Array.isArray(feat)) setFeaturedProducts(feat);
-          if (pop && Array.isArray(pop)) setPopularProducts(pop);
-        } else {
-          // Fallback: Query Supabase directly from client (crucial for Vercel static deployments)
-          console.log("⚡ Express API unavailable or empty. Fetching products directly from Supabase...");
-          const directProds = await fetchProductsFromSupabaseDirectly();
-          if (directProds && directProds.length > 0) {
-            setProducts(directProds);
-            setFeaturedProducts(directProds.filter(p => p.featured));
-            setPopularProducts(directProds.filter(p => p.popular));
+        const prods = await fetchJson("/api/products");
+        if (!Array.isArray(prods)) throw new Error("The catalogue could not be loaded.");
+        if (!controller.signal.aborted) {
+          setProducts(prods); setFeaturedProducts(prods.filter(p => p.featured)); setPopularProducts(prods.filter(p => p.popular)); setCatalogError("");
+        }
+        if (initial) {
+          const results = await Promise.allSettled([fetchJson("/api/categories"),fetchJson("/api/reviews")]);
+          if (!controller.signal.aborted) {
+            if (results[0].status === "fulfilled" && Array.isArray(results[0].value) && results[0].value.length) setCategories(results[0].value);
+            if (results[1].status === "fulfilled" && Array.isArray(results[1].value)) setReviews(results[1].value);
           }
         }
-      } catch (err) {
-        console.error("API Fetch operational failure - attempting direct Supabase query.", err);
-        const directProds = await fetchProductsFromSupabaseDirectly();
-        if (directProds && directProds.length > 0) {
-          setProducts(directProds);
-          setFeaturedProducts(directProds.filter(p => p.featured));
-          setPopularProducts(directProds.filter(p => p.popular));
-        }
-      } finally {
-        setIsLoading(false);
-      }
+      } catch (failure: any) {
+        if (!controller.signal.aborted) setCatalogError(failure.message || "Unable to load the catalogue. Please retry.");
+      } finally { fetching = false; if (!controller.signal.aborted) setIsLoading(false); }
     };
-
-    fetchData();
-
-    // Turn real-time synchronization on for products (polling every 5 seconds)
-    const pollInterval = setInterval(async () => {
-      const fetchSafe = async (url: string) => {
-        try {
-          const res = await fetch(url);
-          if (res.ok) {
-            return await res.json();
-          }
-        } catch (e) {
-          // Silent recovery in background
-        }
-        return null;
-      };
-
-      try {
-        const [freshProds, freshFeat, freshPop] = await Promise.all([
-          fetchSafe("/api/products"),
-          fetchSafe("/api/featured-products"),
-          fetchSafe("/api/popular-products")
-        ]);
-
-        if (freshProds && Array.isArray(freshProds) && freshProds.length > 0) {
-          setProducts(freshProds);
-          if (freshFeat) setFeaturedProducts(freshFeat);
-          if (freshPop) setPopularProducts(freshPop);
-        } else {
-          const directProds = await fetchProductsFromSupabaseDirectly();
-          if (directProds && directProds.length > 0) {
-            setProducts(directProds);
-            setFeaturedProducts(directProds.filter(p => p.featured));
-            setPopularProducts(directProds.filter(p => p.popular));
-          }
-        }
-      } catch (err) {
-        // Silent recovery
-      }
-    }, 5000);
-
-    // Turn on real-time synchronization using Supabase Realtime Channels
-    let channel: any = null;
-    if (supabase) {
-      channel = supabase
-        .channel("realtime-updates")
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "products" },
-          async (payload) => {
-            console.log("⚡ Real-time Product change detected via Supabase Realtime:", payload);
-            try {
-              const directProds = await fetchProductsFromSupabaseDirectly();
-              if (directProds && directProds.length > 0) {
-                setProducts(directProds);
-                setFeaturedProducts(directProds.filter(p => p.featured));
-                setPopularProducts(directProds.filter(p => p.popular));
-              }
-            } catch (err) {
-              console.error("Realtime fetch products failed:", err);
-            }
-          }
-        )
-        .subscribe((status) => {
-          console.log("Supabase Realtime subscription status:", status);
-        });
-    }
+    void loadCatalog(true);
+    const pollInterval = setInterval(() => { void loadCatalog(); }, 60000);
 
     // Track scroll
     const handleScroll = () => {
@@ -457,9 +370,7 @@ export default function App() {
         window.visualViewport.removeEventListener("resize", handleViewportChange);
       }
       clearInterval(pollInterval);
-      if (channel && supabase) {
-        supabase.removeChannel(channel);
-      }
+      controller.abort();
     };
   }, []);
 
@@ -483,7 +394,7 @@ export default function App() {
   // Synchronize dynamic URL query parameters for deep linking
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    
+
     const categoryParam = params.get('category');
     if (categoryParam && DEFAULT_CATEGORIES.some(c => c.id === categoryParam)) setSelectedCategory(categoryParam);
     const query = params.get('q');
@@ -496,15 +407,20 @@ export default function App() {
 
     // Support direct tracking URL parameters (e.g. ?tab=tracker&order=BDEC-...)
     const orderParam = params.get("order") || params.get("orderId") || params.get("track");
+    const accessToken = new URLSearchParams(window.location.hash.slice(1)).get("access");
+    if (orderParam && accessToken) {
+      rememberOrderAccess(orderParam.toUpperCase(), accessToken);
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
     if (orderParam && typeof window !== "undefined") {
-      localStorage.setItem("last_tracking_id", orderParam.toUpperCase());
+      sessionStorage.setItem("last_tracking_id", orderParam.toUpperCase());
     }
 
     // Support #track=BDEC-... hash deep link
     if (typeof window !== "undefined" && window.location.hash.includes("track=")) {
       const hashTrackId = window.location.hash.split("track=")[1].split("&")[0];
       if (hashTrackId) {
-        localStorage.setItem("last_tracking_id", hashTrackId.toUpperCase());
+        sessionStorage.setItem("last_tracking_id", hashTrackId.toUpperCase());
         setActiveTab("tracker");
       }
     }
@@ -523,7 +439,7 @@ export default function App() {
   // Sync page state back to URL query parameters for live shareable link generation
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    
+
     if (selectedProduct) {
       params.set("product", selectedProduct.id);
       params.delete("tab");
@@ -536,7 +452,7 @@ export default function App() {
         params.delete("tab");
       }
     }
-    
+
     if (activeTab === 'shop' && selectedCategory !== 'all') params.set('category', selectedCategory); else params.delete('category');
     if (activeTab === 'shop' && searchQuery) params.set('q', searchQuery); else params.delete('q');
     const queryString = params.toString();
@@ -613,12 +529,27 @@ export default function App() {
     }
   }, [selectedProduct]);
 
+  // Reconcile cached baskets against the current server catalogue without silently removing items.
+  useEffect(() => {
+    if (!products.length) return;
+    setCartItems(previous => previous.map(item => {
+      const product = products.find(p => p.id === item.id);
+      return product ? {...cartFromProduct(product, item.quantity), unavailable: !isPurchasable(product) || !quantityIsAllowed(item.quantity, product)} : {...item, unavailable: true};
+    }));
+  }, [products]);
+
   // Sync Cart quantity edits
   const handleAddToCart = (p: Product, quantity: number = 1, e?: React.MouseEvent | MouseEvent) => {
     if (e) {
       e.stopPropagation();
     }
 
+    const current = products.find(item => item.id === p.id);
+    const existingQuantity = cartItems.find(item => item.id === p.id)?.quantity || 0;
+    if (!current || !isPurchasable(current) || !quantityIsAllowed(existingQuantity + quantity, current)) {
+      toast.error("This quantity is unavailable. Please check the current product details."); return;
+    }
+    p = current;
     triggerHapticFeedback(35);
 
     // Trigger falling grains burst at click coordinate
@@ -635,15 +566,7 @@ export default function App() {
       }
       return [
         ...prevItems,
-        {
-          id: p.id,
-          name: p.name,
-          price: p.price,
-          unit: p.unit,
-          img: p.img,
-          productImage: p.productImage,
-          quantity
-        }
+        cartFromProduct(p, quantity)
       ];
     });
 
@@ -653,6 +576,8 @@ export default function App() {
   };
 
   const handleUpdateCartQty = (id: string, quantity: number) => {
+    const product = products.find(p => p.id === id);
+    if (!product || !isPurchasable(product) || !quantityIsAllowed(quantity, product)) { toast.error("That quantity is not currently available."); return; }
     setCartItems((prev) => {
       const item = prev.find((it) => it.id === id);
       if (item && item.quantity !== quantity) {
@@ -697,10 +622,12 @@ export default function App() {
       return;
     }
 
-    if (fulfillmentType !== "pickup" && (!address.trim() || !checkoutFormData.deliveryQuoteToken || checkoutFormData.deliveryQuotedAddress !== address.trim() || verifiedDeliveryCharge === null || !isDeliverable || !customerCoordinates)) {
+    if (fulfillmentType !== "pickup" && (!address.trim() || (!checkoutFormData.deliveryQuoteToken || checkoutFormData.quoteExpiresAt <= Date.now()) || checkoutFormData.deliveryQuotedAddress !== address.trim() || verifiedDeliveryCharge === null || !isDeliverable || !customerCoordinates)) {
       const message = "Calculate delivery charges for your address before continuing.";
       setCheckoutError(message); toast.error(message); return;
     }
+
+    if (cartItems.some(item => item.unavailable)) { setCheckoutError("Some items are unavailable or quantities have changed. Please update your basket."); setIsCartOpen(true); return; }
 
     if (!cartItems || cartItems.length === 0) {
       const errMsg = "Your basket is empty. Please add items before placing an order.";
@@ -721,7 +648,7 @@ export default function App() {
     setCheckoutError("");
 
     const isPickupOrder = fulfillmentType === "pickup";
-    if (!isPickupOrder && (verifiedDeliveryCharge === null || !isDeliverable || !checkoutFormData.deliveryQuoteToken || checkoutFormData.deliveryQuotedAddress !== checkoutFormData.address.trim())) { setIsPlacingOrder(false); setCheckoutError("Calculate delivery charges for your address before ordering."); return; }
+    if (!isPickupOrder && (verifiedDeliveryCharge === null || !isDeliverable || (!checkoutFormData.deliveryQuoteToken || checkoutFormData.quoteExpiresAt <= Date.now()) || checkoutFormData.deliveryQuotedAddress !== checkoutFormData.address.trim())) { setIsPlacingOrder(false); setCheckoutError("Calculate delivery charges for your address before ordering."); return; }
     const { name, phone, email, address, city, area } = checkoutFormData;
     const finalAddress = isPickupOrder
       ? "Store Depot: Babay Dee Atta Chakki, Main Gulraiz Phase 3 / High Court Rd, Rawalpindi"
@@ -735,10 +662,7 @@ export default function App() {
     const dist = isPickupOrder ? 0 : customDistanceKm;
 
     try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const payload = {
           name: name.trim(),
           phone: phone.trim(),
           email: (email || "").trim(),
@@ -747,7 +671,9 @@ export default function App() {
           city: resolvedCity,
           area: resolvedArea,
           subLocation: resolvedArea,
-          cartItems,
+          cartItems: cartItems.map(({id, quantity}) => ({id, quantity})),
+          checkoutContext: checkoutFormData.checkoutContext,
+          addressVersion: checkoutFormData.addressVersion,
           paymentMethod: finalPaymentMethod,
           fulfillmentType,
           pickupNotes: (checkoutFormData as any).pickupNotes || "",
@@ -761,12 +687,24 @@ export default function App() {
           customerCoordinates: { lat: custLat, lng: custLng },
           deliveryDate: checkoutFormData.deliveryDate,
           deliverySlot: checkoutFormData.deliverySlot
-        })
+        };
+      const fingerprint = JSON.stringify(payload);
+      if (!checkoutAttempt.current || checkoutAttempt.current.key !== checkoutFormData.checkoutContext) checkoutAttempt.current = {fingerprint, key: checkoutFormData.checkoutContext};
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Idempotency-Key": checkoutAttempt.current.key },
+        body: fingerprint,
+        signal: AbortSignal.timeout(45000)
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
         const orderObj = data.order || {};
+        orderObj.orderAccessToken = data.orderAccessToken || orderObj.orderAccessToken;
+        rememberOrderAccess(orderObj.id, orderObj.orderAccessToken || "");
+        checkoutAttempt.current = null;
+        setCheckoutFormData(previous => ({...previous, checkoutContext: crypto.randomUUID(), addressVersion: 0, quoteExpiresAt: 0, deliveryQuoteToken: "", deliveryQuotedAddress: ""}));
+        setVerifiedDeliveryCharge(null); setIsDeliverable(false);
         if (data.emailStatus) {
           orderObj.emailStatus = data.emailStatus;
         }
@@ -779,10 +717,7 @@ export default function App() {
           toast.success(`Receipt sent to ${data.emailStatus.recipient || email}!`);
         }
         if (typeof window !== "undefined") {
-          localStorage.setItem("last_tracking_id", data.orderId || data.order?.id);
-          if (email) localStorage.setItem("customer_email", email);
-          if (name) localStorage.setItem("customer_name", name);
-          if (phone) localStorage.setItem("customer_phone", phone);
+          sessionStorage.setItem("last_tracking_id", data.orderId || data.order?.id);
         }
       } else {
         const errMsg = data.error || "Failed to process checkout transaction. Try again.";
@@ -825,7 +760,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between font-sans relative pb-16 md:pb-0">
-      
+
       <a href="#main-content" className="skip-link">Skip to main content</a>
       {/* GSAP Smooth Scroll Progress Indicator */}
       <GsapTopProgressBar />
@@ -863,10 +798,10 @@ export default function App() {
         )}
 
         <div className="max-w-7xl mx-auto px-4 flex flex-col gap-1.5 md:gap-0.5">
-          
+
           {/* Upper Part of Nav Bar */}
           <div className="relative flex items-center justify-between w-full min-h-[52px] sm:min-h-[56px] md:min-h-[60px]">
-            
+
             {/* Left: Brand Logo Emblem + Mobile Title */}
             <div
               onClick={() => {
@@ -877,13 +812,13 @@ export default function App() {
               className="flex items-center gap-2 cursor-pointer shrink-0 group z-10"
             >
               {/* Round emblem logo sized almost equal to navbar height with explicit 1/1 aspect ratio & smooth hover transition */}
-              <div 
+              <div
                 className="w-12 h-12 sm:w-14 sm:h-14 md:w-15 md:h-15 lg:w-16 lg:h-16 aspect-square rounded-full shrink-0 flex items-center justify-center overflow-hidden transition-transform duration-300 ease-out hover:scale-105 active:scale-95 will-change-transform transform-gpu cursor-pointer shadow-2xs group-hover:shadow-md"
                 style={{ aspectRatio: "1 / 1" }}
               >
                 <Logo className="w-16 h-12 sm:w-20 sm:h-14 md:w-24 md:h-16" showText={false} />
               </div>
-              
+
               {/* Mobile-only website name title */}
               <div className="flex flex-col text-left md:hidden">
                 <p className="font-display font-black text-xs sm:text-sm leading-tight text-slate-900 uppercase tracking-tight flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-1.5 whitespace-nowrap">
@@ -1038,7 +973,7 @@ export default function App() {
                 onClose={() => setCreatedOrder(null)}
                 onTrack={() => {
                   if (typeof window !== "undefined") {
-                    localStorage.setItem("last_tracking_id", createdOrder.id);
+                    sessionStorage.setItem("last_tracking_id", createdOrder.id);
                   }
                   setActiveTab("tracker");
                   setCreatedOrder(null);
@@ -1052,9 +987,11 @@ export default function App() {
                         merged[existsIdx] = {
                           ...merged[existsIdx],
                           quantity: merged[existsIdx].quantity + newItem.quantity,
+                          unavailable: !quantityIsAllowed(merged[existsIdx].quantity + newItem.quantity, products.find(p => p.id === newItem.id) || {...newItem, stockQuantity: 0}),
                         };
                       } else {
-                        merged.push({ ...newItem });
+                        const product = products.find(p => p.id === newItem.id);
+                        if (product && isPurchasable(product) && quantityIsAllowed(newItem.quantity, product)) merged.push(cartFromProduct(product, newItem.quantity));
                       }
                     });
                     return merged;
@@ -1107,7 +1044,7 @@ export default function App() {
               exit="exit"
               className="max-w-7xl mx-auto px-4 py-8 space-y-8"
             >
-            
+
             {/* Header description */}
             <div className="text-center max-w-xl mx-auto">
               <span className="text-xs font-mono font-bold uppercase tracking-widest text-blue-600">
@@ -1251,7 +1188,7 @@ export default function App() {
 
             {/* Text description details */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-8 text-xs leading-relaxed text-slate-600">
-              
+
               {/* Left col */}
               <div className="md:col-span-6 space-y-4 text-justify">
                 <h4 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-2">
@@ -1303,10 +1240,10 @@ export default function App() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              
+
               {/* Left Column: Contact specifics (5 cols) */}
               <div className="col-span-1 md:col-span-5 space-y-6">
-                
+
                 {/* Specific details banner card */}
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-5">
                   <h3 className="font-bold text-sm text-slate-800 border-b border-slate-100 pb-2">
@@ -1393,7 +1330,7 @@ export default function App() {
                   <span className="font-bold text-slate-700">Digital Map Guidance</span>
                   <span className="text-[10px] text-slate-400 italic font-mono font-bold uppercase tracking-widest">GULREZ PHASE 3 RWP</span>
                 </div>
-                
+
                 {/* Visual Placeholder map mockup with real link */}
                 <div className="flex-1 bg-slate-50 border border-slate-100 rounded-xl relative flex flex-col items-center justify-center text-center p-6 space-y-4">
                   <span className="text-5xl">📍</span>
@@ -1506,7 +1443,7 @@ export default function App() {
 
                 <aside className="lg:col-span-4 receipt-panel checkout-basket" aria-label="Order summary">
                   <h3>Your basket <span className="float-right">{cartItems.length} items</span></h3>
-                  <ul className="receipt-items">{cartItems.map(item=><li key={item.id}><div><strong>{item.name}</strong><small>{item.quantity} {item.unit}</small></div><span>{formatRupees(item.price*item.quantity)}</span></li>)}</ul>
+                  <ul className="receipt-items">{cartItems.map(item=><li key={item.id}><div><strong>{productLabel(item)}</strong><small>{item.quantity} {item.unit}</small></div><span>{formatRupees(item.price*item.quantity)}</span></li>)}</ul>
                   <dl className="receipt-totals"><div><dt>Subtotal</dt><dd>{formatRupees(cartItems.reduce((sum,item)=>sum+item.price*item.quantity,0))}</dd></div><div><dt>Delivery{fulfillmentType !== "pickup" && verifiedDeliveryCharge !== null && <small className="block mt-1">{customDistanceKm.toFixed(2)} km {["area", "sector", "phase", "neighborhood"].includes(checkoutFormData.locationPrecision || "") ? "to matched " + (checkoutFormData.locationPrecision === "neighborhood" ? "neighbourhood" : checkoutFormData.locationPrecision) : "by road"}</small>}</dt><dd>{fulfillmentType === "pickup" ? "Free pickup" : verifiedDeliveryCharge !== null ? formatRupees(verifiedDeliveryCharge) : "Not calculated yet"}</dd></div><div className="receipt-grand-total"><dt>Total</dt><dd>{fulfillmentType !== "pickup" && verifiedDeliveryCharge === null ? "Awaiting delivery charge" : formatRupees(cartItems.reduce((sum,item)=>sum+item.price*item.quantity,0)+(fulfillmentType === "pickup" ? 0 : verifiedDeliveryCharge ?? 0))}</dd></div></dl>
                   <p>{fulfillmentType === "pickup" ? "Collect from our store on Main Gulraiz Phase 3 / High Court Road, Rawalpindi." : "Your delivery charge is calculated from the road distance to the address you enter. Pay when your order arrives."}</p>
                 </aside>
@@ -1518,6 +1455,7 @@ export default function App() {
         </React.Suspense>
       </main>
 
+      {catalogError && <p role="alert" className="max-w-7xl mx-auto my-4 px-4 text-red-700">{catalogError} <button type="button" className="underline" onClick={() => location.reload()}>Retry</button></p>}
       {/* 4. Slide-Out Basket drawer widget mapping */}
       <CartDrawer
         isOpen={isCartOpen}
@@ -1610,7 +1548,7 @@ export default function App() {
       {/* 7. Footer brand content details */}
       <footer className="relative z-10 bg-slate-900 text-white font-sans border-t-4 border-amber-500 py-12">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 items-start">
-          
+
           {/* Logo description column (3.5 cols) */}
           <div className="lg:col-span-4 space-y-4">
             <div className="flex items-center gap-2.5">
@@ -1634,6 +1572,7 @@ export default function App() {
             </span>
           </div>
 
+          <div className="lg:col-span-12"><PolicyLinks /></div>
           {/* Quick links columns (2.5 cols) */}
           <div className="lg:col-span-3 space-y-4 lg:pl-4">
             <h4 className="font-sans font-bold text-xs uppercase tracking-widest text-amber-400">
@@ -1703,7 +1642,7 @@ export default function App() {
             <h4 className="font-sans font-bold text-xs uppercase tracking-widest text-amber-400">
               Mill Operator Direct
             </h4>
-            
+
             <div className="space-y-2 text-xs text-slate-350 leading-relaxed font-sans">
               <p className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />

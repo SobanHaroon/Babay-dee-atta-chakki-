@@ -6,7 +6,7 @@ export const BASE_URL = "https://babaydeeattachakki.com";
  * Generates Schema.org Product structured data for Google Search rich snippets
  */
 export function generateProductJsonLd(product: Product) {
-  const isAvailable = !product.outOfStock;
+  const isAvailable = !product.outOfStock && product.purchasable !== false;
   const productImageUrl = product.productImage || product.img || `${BASE_URL}/logo%20coloured.jpg`;
 
   return {
@@ -29,7 +29,6 @@ export function generateProductJsonLd(product: Product) {
       "url": `${BASE_URL}/?product=${product.id}`,
       "priceCurrency": "PKR",
       "price": product.price,
-      "priceValidUntil": "2027-12-31",
       "itemCondition": "https://schema.org/NewCondition",
       "availability": isAvailable ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       "seller": {

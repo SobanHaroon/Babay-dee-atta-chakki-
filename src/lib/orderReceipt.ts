@@ -1,3 +1,4 @@
+import { orderTrackingUrl } from "./orderAccess";
 function escapeReceiptValues(value: any): any {
   if (typeof value === "string") return value.replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]!));
   if (Array.isArray(value)) return value.map(escapeReceiptValues);
@@ -13,6 +14,7 @@ function formatRs(amount: number): string {
  * Generates an elegant, mobile-responsive HTML order summary receipt
  */
 export function generateOrderReceiptHtml(order: any, appUrl: string = ""): string {
+  const privateTrackingUrl = orderTrackingUrl(String(order.id || ""), String(order.orderAccessToken || ""), appUrl || "https://babaydeeattachakki.com");
   order = escapeReceiptValues(order);
   const orderId = order.id || "BDEC-ORDER";
   const isPickup = order.fulfillmentType === "pickup";
@@ -42,7 +44,7 @@ export function generateOrderReceiptHtml(order: any, appUrl: string = ""): strin
   const total = order.total ?? (subtotal + deliveryCharges - discount);
 
   // Direct user to official live order tracker on babaydeeattachakki.com
-  const trackingLink = "https://babaydeeattachakki.com/?tab=tracker&amp;order=" + encodeURIComponent(orderId);
+  const trackingLink = escapeReceiptValues(privateTrackingUrl);
 
   const itemsRows = items.map((item, idx) => {
     const itemTotal = (item.price || 0) * (item.quantity || 1);
@@ -50,8 +52,8 @@ export function generateOrderReceiptHtml(order: any, appUrl: string = ""): strin
     return `
       <tr style="border-bottom: 1px solid #f1f5f9; ${idx % 2 === 1 ? 'background-color: #fafaf9;' : ''}">
         <td style="padding: 14px 16px; text-align: left; vertical-align: top;">
-          <div style="font-weight: 700; color: #1c1917; font-size: 14px;">${item.name || "Atta / Chakki Item"}</div>
-          <div style="font-size: 12px; color: #78716c; margin-top: 2px;">Cold-Stone Ground • 100% Pure Natural</div>
+          <div style="font-weight: 700; color: #1c1917; font-size: 14px;">${item.name || "Atta / Chakki Item"}${item.variantLabel ? " - " + item.variantLabel : ""}</div>
+          <div style="font-size: 12px; color: #78716c; margin-top: 2px;">${item.packWeightKg ? "Pack weight: " + item.packWeightKg + " Kg" : ""}</div>
         </td>
         <td style="padding: 14px 12px; text-align: center; vertical-align: top; font-size: 13px; color: #44403c; font-weight: 600;">
           ${item.quantity || 1} <span style="font-size: 11px; color: #78716c;">${unitLabel}</span>
@@ -72,6 +74,7 @@ export function generateOrderReceiptHtml(order: any, appUrl: string = ""): strin
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
   <title>Receipt - Order ${orderId} | Babay Dee Atta Chakki</title>
 </head>
 <body style="margin: 0; padding: 24px 12px; background-color: #f5f5f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #292524;">
@@ -336,7 +339,7 @@ GRAND TOTAL:        Rs. ${total}
 ========================================
 
 Helpline: 0321-5010846 | orders@babaydeechakki.com
-Track Order: https://babaydeeattachakki.com/?tab=tracker&order=${encodeURIComponent(orderId)}
+Private tracking link: ${orderTrackingUrl(orderId, order.orderAccessToken || "", "https://babaydeeattachakki.com")}
 Main Gulraiz Phase 3 / High Court Rd, Rawalpindi
 Thank you for choosing Babay Dee Atta Chakki!
   `.trim();

@@ -9,6 +9,13 @@ export interface Product {
   price: number;
   priceRange?: string; // e.g. "2900 - 3800" for Badam Giri
   unit: string;
+  saleUnit?: "kg" | "pack" | null;
+  stockQuantity?: number | null;
+  packWeightKg?: number | null;
+  quantityStep?: number;
+  purchasable?: boolean;
+  catalogIssues?: string[];
+  variantLabel?: string;
   desc: string;
   img: string;
   productImage?: string;
@@ -47,6 +54,9 @@ export interface Review {
   city: string;
   review: string;
   date: string;
+  verifiedPurchase?: boolean;
+  status?: "approved" | "pending" | "rejected";
+  isSynthetic?: boolean;
 }
 
 export interface CartItem {
@@ -57,10 +67,16 @@ export interface CartItem {
   img: string;
   productImage?: string;
   quantity: number;
+  saleUnit?: "kg" | "pack" | null;
+  quantityStep?: number;
+  packWeightKg?: number | null;
+  variantLabel?: string;
+  unavailable?: boolean;
 }
 
 export interface Order {
   id: string;
+  orderAccessToken?: string;
   customer: {
     name: string;
     phone: string;

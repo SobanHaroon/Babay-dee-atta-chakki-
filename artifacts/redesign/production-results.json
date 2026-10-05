@@ -1,0 +1,171 @@
+[
+  {
+    "mode": "production",
+    "catalog": "local fixture"
+  },
+  {
+    "width": 1440,
+    "noOverflow": true,
+    "gridColumns": [
+      {
+        "name": "collection-grid",
+        "columns": 3
+      },
+      {
+        "name": "craft-steps",
+        "columns": 3
+      },
+      {
+        "name": "provisions-grid",
+        "columns": 4
+      },
+      {
+        "name": "provisions-grid",
+        "columns": 4
+      }
+    ]
+  },
+  {
+    "width": 1280,
+    "noOverflow": true,
+    "gridColumns": [
+      {
+        "name": "collection-grid",
+        "columns": 3
+      },
+      {
+        "name": "craft-steps",
+        "columns": 3
+      },
+      {
+        "name": "provisions-grid",
+        "columns": 4
+      },
+      {
+        "name": "provisions-grid",
+        "columns": 4
+      }
+    ]
+  },
+  {
+    "width": 1024,
+    "noOverflow": true,
+    "gridColumns": [
+      {
+        "name": "collection-grid",
+        "columns": 3
+      },
+      {
+        "name": "craft-steps",
+        "columns": 3
+      },
+      {
+        "name": "provisions-grid",
+        "columns": 2
+      },
+      {
+        "name": "provisions-grid",
+        "columns": 2
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "noOverflow": true,
+    "gridColumns": [
+      {
+        "name": "collection-grid",
+        "columns": 3
+      },
+      {
+        "name": "craft-steps",
+        "columns": 3
+      },
+      {
+        "name": "provisions-grid",
+        "columns": 2
+      },
+      {
+        "name": "provisions-grid",
+        "columns": 2
+      }
+    ]
+  },
+  {
+    "width": 640,
+    "noOverflow": true,
+    "gridColumns": [
+      {
+        "name": "collection-grid",
+        "columns": 1
+      },
+      {
+        "name": "craft-steps",
+        "columns": 1
+      },
+      {
+        "name": "provisions-grid",
+        "columns": 2
+      },
+      {
+        "name": "provisions-grid",
+        "columns": 2
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "noOverflow": true,
+    "gridColumns": [
+      {
+        "name": "collection-grid",
+        "columns": 1
+      },
+      {
+        "name": "craft-steps",
+        "columns": 1
+      },
+      {
+        "name": "provisions-grid",
+        "columns": 2
+      },
+      {
+        "name": "provisions-grid",
+        "columns": 2
+      }
+    ]
+  },
+  {
+    "width": 320,
+    "noOverflow": true,
+    "gridColumns": [
+      {
+        "name": "collection-grid",
+        "columns": 1
+      },
+      {
+        "name": "craft-steps",
+        "columns": 1
+      },
+      {
+        "name": "provisions-grid",
+        "columns": 2
+      },
+      {
+        "name": "provisions-grid",
+        "columns": 2
+      }
+    ]
+  },
+  {
+    "ambientPause": true
+  },
+  {
+    "scene": true,
+    "reducedMotion": true,
+    "shopNavigation": true,
+    "basketKeyboard": true,
+    "productDeepLink": true,
+    "runtimeErrors": []
+  }
+]

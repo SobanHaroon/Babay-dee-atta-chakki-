@@ -1,0 +1,365 @@
+[
+  {
+    "width": 320,
+    "states": [
+      {
+        "cards": [
+          {
+            "opacity": 0.4812,
+            "x": 12.734375,
+            "width": 93,
+            "top": 103.90322875976562,
+            "height": 355.9375,
+            "overflow": false
+          },
+          {
+            "opacity": 0,
+            "x": 113.734375,
+            "width": 93,
+            "top": 125.078125,
+            "height": 355.9375,
+            "overflow": false
+          },
+          {
+            "opacity": 0,
+            "x": 214.734375,
+            "width": 93,
+            "top": 125.078125,
+            "height": 355.9375,
+            "overflow": false
+          }
+        ],
+        "pageOverflow": false
+      },
+      {
+        "cards": [
+          {
+            "opacity": 1,
+            "x": 12.734375,
+            "width": 93,
+            "top": 81.078125,
+            "height": 355.9375,
+            "overflow": false
+          },
+          {
+            "opacity": 0.9867,
+            "x": 113.734375,
+            "width": 93,
+            "top": 81.66382598876953,
+            "height": 355.9375,
+            "overflow": false
+          },
+          {
+            "opacity": 0,
+            "x": 214.734375,
+            "width": 93,
+            "top": 125.078125,
+            "height": 355.9375,
+            "overflow": false
+          }
+        ],
+        "pageOverflow": false
+      },
+      {
+        "cards": [
+          {
+            "opacity": 1,
+            "x": 12,
+            "width": 93.328125,
+            "top": 80.5,
+            "height": 355.9375,
+            "overflow": false
+          },
+          {
+            "opacity": 1,
+            "x": 113.328125,
+            "width": 93.328125,
+            "top": 80.5,
+            "height": 355.9375,
+            "overflow": false
+          },
+          {
+            "opacity": 1,
+            "x": 214.65625,
+            "width": 93.34375,
+            "top": 80.5,
+            "height": 355.9375,
+            "overflow": false
+          }
+        ],
+        "pageOverflow": false
+      },
+      {
+        "cards": [
+          {
+            "opacity": 0.5029,
+            "x": 12.734375,
+            "width": 93,
+            "top": 102.94962310791016,
+            "height": 355.9375,
+            "overflow": false
+          },
+          {
+            "opacity": 0,
+            "x": 113.734375,
+            "width": 93,
+            "top": 125.078125,
+            "height": 355.9375,
+            "overflow": false
+          },
+          {
+            "opacity": 0,
+            "x": 214.734375,
+            "width": 93,
+            "top": 125.078125,
+            "height": 355.9375,
+            "overflow": false
+          }
+        ],
+        "pageOverflow": false
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "states": [
+      {
+        "cards": [
+          {
+            "opacity": 0,
+            "x": 12,
+            "width": 116.65625,
+            "top": 125,
+            "height": 303.15625,
+            "overflow": false
+          },
+          {
+            "opacity": 0,
+            "x": 136.65625,
+            "width": 116.671875,
+            "top": 125,
+            "height": 303.15625,
+            "overflow": false
+          },
+          {
+            "opacity": 0,
+            "x": 261.328125,
+            "width": 116.65625,
+            "top": 125,
+            "height": 303.15625,
+            "overflow": false
+          }
+        ],
+        "pageOverflow": false
+      },
+      {
+        "cards": [
+          {
+            "opacity": 1,
+            "x": 12,
+            "width": 116.65625,
+            "top": 81,
+            "height": 303.15625,
+            "overflow": false
+          },
+          {
+            "opacity": 0.9375,
+            "x": 136.65625,
+            "width": 116.671875,
+            "top": 83.75,
+            "height": 303.15625,
+            "overflow": false
+          },
+          {
+            "opacity": 0,
+            "x": 261.328125,
+            "width": 116.65625,
+            "top": 125,
+            "height": 303.15625,
+            "overflow": false
+          }
+        ],
+        "pageOverflow": false
+      },
+      {
+        "cards": [
+          {
+            "opacity": 1,
+            "x": 12,
+            "width": 116.65625,
+            "top": 81,
+            "height": 303.15625,
+            "overflow": false
+          },
+          {
+            "opacity": 1,
+            "x": 136.65625,
+            "width": 116.671875,
+            "top": 81,
+            "height": 303.15625,
+            "overflow": false
+          },
+          {
+            "opacity": 1,
+            "x": 261.328125,
+            "width": 116.65625,
+            "top": 81,
+            "height": 303.15625,
+            "overflow": false
+          }
+        ],
+        "pageOverflow": false
+      },
+      {
+        "cards": [
+          {
+            "opacity": 0,
+            "x": 12,
+            "width": 116.65625,
+            "top": 125,
+            "height": 303.15625,
+            "overflow": false
+          },
+          {
+            "opacity": 0,
+            "x": 136.65625,
+            "width": 116.671875,
+            "top": 125,
+            "height": 303.15625,
+            "overflow": false
+          },
+          {
+            "opacity": 0,
+            "x": 261.328125,
+            "width": 116.65625,
+            "top": 125,
+            "height": 303.15625,
+            "overflow": false
+          }
+        ],
+        "pageOverflow": false
+      }
+    ]
+  },
+  {
+    "width": 1440,
+    "states": [
+      {
+        "cards": [
+          {
+            "opacity": 0,
+            "x": 599.8125,
+            "width": 221.5625,
+            "top": 266.5,
+            "height": 318,
+            "overflow": false
+          },
+          {
+            "opacity": 0,
+            "x": 841.375,
+            "width": 221.5625,
+            "top": 266.5,
+            "height": 318,
+            "overflow": false
+          },
+          {
+            "opacity": 0,
+            "x": 1082.9375,
+            "width": 221.5625,
+            "top": 266.5,
+            "height": 318,
+            "overflow": false
+          }
+        ],
+        "pageOverflow": false
+      },
+      {
+        "cards": [
+          {
+            "opacity": 1,
+            "x": 599.8125,
+            "width": 221.5625,
+            "top": 222.5,
+            "height": 318,
+            "overflow": false
+          },
+          {
+            "opacity": 0.9375,
+            "x": 841.375,
+            "width": 221.5625,
+            "top": 225.25,
+            "height": 318,
+            "overflow": false
+          },
+          {
+            "opacity": 0,
+            "x": 1082.9375,
+            "width": 221.5625,
+            "top": 266.5,
+            "height": 318,
+            "overflow": false
+          }
+        ],
+        "pageOverflow": false
+      },
+      {
+        "cards": [
+          {
+            "opacity": 1,
+            "x": 599.8125,
+            "width": 221.5625,
+            "top": 222.5,
+            "height": 318,
+            "overflow": false
+          },
+          {
+            "opacity": 1,
+            "x": 841.375,
+            "width": 221.5625,
+            "top": 222.5,
+            "height": 318,
+            "overflow": false
+          },
+          {
+            "opacity": 1,
+            "x": 1082.9375,
+            "width": 221.5625,
+            "top": 222.5,
+            "height": 318,
+            "overflow": false
+          }
+        ],
+        "pageOverflow": false
+      },
+      {
+        "cards": [
+          {
+            "opacity": 0,
+            "x": 599.8125,
+            "width": 221.5625,
+            "top": 266.5,
+            "height": 318,
+            "overflow": false
+          },
+          {
+            "opacity": 0,
+            "x": 841.375,
+            "width": 221.5625,
+            "top": 266.5,
+            "height": 318,
+            "overflow": false
+          },
+          {
+            "opacity": 0,
+            "x": 1082.9375,
+            "width": 221.5625,
+            "top": 266.5,
+            "height": 318,
+            "overflow": false
+          }
+        ],
+        "pageOverflow": false
+      }
+    ]
+  }
+]

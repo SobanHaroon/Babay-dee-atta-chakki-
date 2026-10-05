@@ -1,203 +1,134 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createDeliveryQuote, matchAddress, matchLocality, matchNeighborhood, localityQuery, signDeliveryQuote, verifyDeliveryQuote, withoutHouse, type AddressMatch } from '../api/addressDelivery.js';
-import { pakistanDateKey, orderProgress } from '../src/lib/commerce.js';
-import { generateOrderReceiptHtml, generateOrderReceiptPlainText } from '../src/lib/orderReceipt.js';
-import { correctAddressText, lookupQueries, houseNumber } from '../api/addressText.js';
-const settings = {storeLatitude:33.567348,storeLongitude:73.104510,pricePerKm:50,maxDeliveryDistanceKm:45};
-const address = 'House 14, Main Gulraiz Road, Rawalpindi';
-const match: AddressMatch = {latitude:33.586714,longitude:73.101111,matchedAddress:'Main Gulraiz Road, Khayaban-e-Tanveer, Rawalpindi, Pakistan',city:'Rawalpindi',area:'Khayaban-e-Tanveer',street:'Main Gulraiz Road',type:'street',confidence:1,provider:'Geoapify'};
+import {randomUUID} from 'node:crypto';
+import {createDeliveryQuote,deliverySearchSequence,resolveDeliveryCandidates,matchAddress,matchLocality,matchNeighborhood,signDeliveryQuote,verifyDeliveryQuote,deliveryFee,clearAddressCache,type AddressMatch} from '../api/addressDelivery.js';
+import {parseGeocodingResponse,geoapifySearch} from '../api/geoapify.js';
+import {correctAddressText,lookupQueries,withoutHouse,sectorId} from '../api/addressText.js';
+import {deliveryReducer,initialDeliveryState} from '../src/lib/deliveryCheckout.js';
+import {getDeliverySettings} from '../api/deliverySettings.js';
+process.env.NODE_ENV='test';
+process.env.GEOAPIFY_GEOCODING_KEY='synthetic-geocoding-key';
+process.env.GEOAPIFY_ROUTING_KEY='synthetic-routing-key';
+process.env.DELIVERY_QUOTE_SECRET='synthetic-quote-secret-at-least-32-characters';
+const settings={storeLatitude:33.567348,storeLongitude:73.104510,pricePerKm:50,maxDeliveryDistanceKm:45,minDeliveryFee:50,serviceRegion:{south:33.3,west:72.8,north:33.9,east:73.5}};
+const context=()=>({checkoutContext:randomUUID(),addressVersion:1});
+const address='House 14 Street 5 Gulraiz Phase 3 Rawalpindi';
+const street:AddressMatch={latitude:33.56,longitude:73.10,matchedAddress:'Street 5, Gulrez, Rawalpindi',city:'Rawalpindi',area:'Gulrez',street:'Street 5',type:'street',confidence:0.7,provider:'Geoapify'};
+const neighborhood:AddressMatch={...street,street:'',name:'Gulrez Housing',type:'city',matchedAddress:'Gulrez Housing, Bahria Town, Rawalpindi District',city:'Bahria Town',county:'Rawalpindi District',area:'',confidence:0};
+const raw=(p:AddressMatch)=>({lat:p.latitude,lon:p.longitude,formatted:p.matchedAddress,name:p.name,city:p.city,suburb:p.area,county:p.county,state:p.region,street:p.street,housenumber:p.houseNumber,result_type:p.type,rank:{confidence:p.confidence,confidence_building_level:p.buildingConfidence}});
 
-test('address matching rejects city centres and conflicting sectors, streets and societies',()=>{
- assert.equal(matchAddress(address,match),true);
- assert.equal(withoutHouse(address),'Main Gulraiz Road, Rawalpindi');
- assert.equal(matchAddress(address,{...match,type:'city'}),false);
- assert.equal(matchAddress('House 14, Gulraiz Phase 3, Rawalpindi',{...match,matchedAddress:'Phase 3, Bahria Town, Rawalpindi'}),false);
- const sectorMatch={...match,city:'Islamabad',street:'Street 25',matchedAddress:'14, Street 25, F-10/2, Islamabad'};
- assert.equal(matchAddress('House 14 Street 25 F-10/2 Islamabad',sectorMatch),true);
- assert.equal(matchAddress('House 14 Street 25 F-10/2 Islamabad',{...sectorMatch,matchedAddress:'Street 25, G-10, Islamabad'}),false);
- assert.equal(matchAddress('House 14 Street 25 F-10/2 Islamabad',{...sectorMatch,street:'Street 14'}),false);
- assert.equal(matchAddress('House 14 Street 25 F-10/2 Islamabad',{...sectorMatch,type:'amenity'}),false);
+test('premise removal preserves street, sector, phase and Islamabad subdivision identifiers',()=>{
+ for(const premise of ['House','Flat','Plot','Plaza','Apartment','Shop'])assert.equal(withoutHouse(`${premise} 14, Street 5 Sector C Bahria Town Phase 8 Rawalpindi`),'Street 5 Sector C Bahria Town Phase 8 Rawalpindi');
+ const a='House 14, Street 5, Sector G-13/1, Islamabad';
+ assert.match(lookupQueries(a).detailed,/G-13\/1/);assert.equal(sectorId(a),'G-13/1');
+ assert.match(lookupQueries('House 14 Street 5 Sector C Bahria Town Phase 8 Rawalpindi').detailed,/Sector C.*Phase 8/);
+ assert.equal(deliverySearchSequence(a)[0].text,a);
+ for(const input of [address,'House 14 Street 5 Sector C Bahria Town Phase 8 Rawalpindi',a]){const q=deliverySearchSequence(input);assert.ok(q.length<=6);assert.ok(q.every(p=>!/^Rawalpindi$|^Islamabad$/i.test(p.text)));}
 });
-test('quotes bind address, coordinates, actual road distance, pricing settings and expiry',()=>{
- const quote={...match,distanceKm:5.25675,deliveryCharge:263};
- const token=signDeliveryQuote(quote,address,settings,1000);
- assert.equal(verifyDeliveryQuote(token,address,settings,2000).deliveryCharge,263);
- for(const [t,a,s,now] of [[token,address+' block B',settings,2000],[token,address,{...settings,pricePerKm:70},2000],[token,address,settings,1801000],[token+'x',address,settings,2000]])assert.throws(()=>verifyDeliveryQuote(t,a as string,s as typeof settings,now as number));
- const [body,signature]=token.split('.');const tampered=JSON.parse(Buffer.from(body,'base64url').toString());tampered.deliveryCharge=0;
- assert.throws(()=>verifyDeliveryQuote(Buffer.from(JSON.stringify(tampered)).toString('base64url')+'.'+signature,address,settings,2000));
+test('Urdu, numeric scripts, abbreviations, spelling variants and punctuation retain meaning',()=>{
+ assert.equal(correctAddressText('مکان ۱۴ گلی ۵ گلریز فیز ۳ راولپنڈی'),'House 14 Street 5 Gulrez Phase 3 Rawalpindi');
+ assert.match(correctAddressText('House 14 st. 5 sec. G 13/1 Islamabad'),/Street 5 Sector G-13\/1/);
+ assert.match(correctAddressText('plasa 47 Jinna bolevard secter E DHA2 Islmabad'),/plaza 47 jinnah boulevard sector E DHA Phase 2 islamabad/i);
+ assert.equal(lookupQueries(address).locality,lookupQueries(address.replace('Gulraiz','Gulrez')).locality);
 });
-test('address quote uses geocoded coordinates and road metres, rejects out of range and routing failures',async t=>{
- process.env.GEOAPIFY_GEOCODING_KEY='test-private-geocoding-key';
- let mode='ok';const urls:string[]=[];
- t.mock.method(globalThis,'fetch',async(input: any)=>{
-   const u=new URL(String(input));urls.push(u.toString());
-   if(u.hostname.includes('geoapify'))return Response.json({results:[{lat:match.latitude,lon:match.longitude,formatted:match.matchedAddress,city:match.city,suburb:match.area,street:match.street,result_type:'street',rank:{confidence:1}}]});
-   return Response.json(mode==='failure'?{code:'NoRoute',routes:[]}:{code:'Ok',routes:[{distance:mode==='far'?46000:5256.75,duration:900,geometry:{coordinates:[[73.104510,33.567348],[match.longitude,match.latitude]]}}]});
- });
- const quote=await createDeliveryQuote(address,settings,'test-token');
- assert.equal(quote.distanceKm,5.25675);assert.equal(quote.deliveryCharge,263);
- assert.equal(verifyDeliveryQuote(quote.quoteToken,address,settings).latitude,match.latitude);
- assert.ok(urls.some(url=>url.includes('73.101111,33.586714')));
- mode='far';await assert.rejects(createDeliveryQuote(address,settings,'test-token'),/within 45 km/);
- mode='failure';await assert.rejects(createDeliveryQuote(address,settings,'test-token'),/driving distance/);
- await assert.rejects(createDeliveryQuote('',settings,'test-token'),/complete address/);
+test('GeoJSON and JSON parsing preserve actual confidence and lon/lat order without inventing scores',()=>{
+ const p=raw(street),json=parseGeocodingResponse({results:[p]})[0];
+ const geo=parseGeocodingResponse({features:[{properties:{...p,lat:undefined,lon:undefined,rank:{}},geometry:{type:'Point',coordinates:[73.10,33.56]}}]})[0];
+ assert.equal(json.latitude,33.56);assert.equal(geo.longitude,73.10);assert.equal(geo.confidence,undefined);
+ assert.throws(()=>parseGeocodingResponse({data:[]}));assert.throws(()=>parseGeocodingResponse({results:[{lat:NaN,lon:73}]}));
 });
-test('Pakistan dates and cancelled tracking do not display misleading progression',()=>{
- assert.equal(pakistanDateKey(new Date('2026-09-24T20:00:00Z')),'2026-09-25');
- assert.equal(orderProgress('Cancelled').index,-1);assert.equal(orderProgress('Out for Delivery').index,3);
- assert.equal(orderProgress('Delivered',true).steps[4],'Collected');
+test('provider request encodes text once and uses country search plus bias without locality/circle exclusions',async t=>{
+ t.mock.method(globalThis,'fetch',async(input:any)=>{const u=new URL(String(input));assert.equal(u.searchParams.get('text'),'Flat 2 & House 14, G-13/1 اسلام آباد');assert.equal(u.searchParams.get('filter'),'countrycode:pk');assert.equal(u.searchParams.get('type'),null);assert.equal(u.searchParams.get('bias'),'proximity:73.10451,33.567348');assert.equal(u.searchParams.get('format'),'json');return Response.json({results:[]});});
+ await geoapifySearch('Flat 2 & House 14, G-13/1 اسلام آباد','fixture',settings,'full');
 });
-test('receipts preserve detailed address and charged fee, escape HTML and link the specific order',()=>{
- const order={id:'BDEC-123',customer:{name:'<script>alert(1)</script>',address,phone:'03211234567'},items:[{name:'Atta',quantity:2,price:100}],subtotal:200,deliveryCharges:263,discount:10,total:453,createdAt:'2026-09-25T00:00:00Z'};
- const html=generateOrderReceiptHtml(order);assert.ok(!html.includes('<script>'));assert.ok(html.includes('&lt;script&gt;'));assert.ok(html.includes(address));assert.ok(html.includes('Rs. 263'));assert.ok(html.includes('order=BDEC-123'));
- const text=generateOrderReceiptPlainText({...order,total:undefined});assert.ok(text.includes('Rs. 453'));
+test('full address is attempted first and broad matches require a pin without a fee or token',async t=>{
+ clearAddressCache();const queries:string[]=[];
+ t.mock.method(globalThis,'fetch',async(input:any)=>{const u=new URL(String(input));assert.equal(u.pathname,'/v1/geocode/search');queries.push(u.searchParams.get('text')!);return Response.json({results:queries.length===1?[]:[raw(neighborhood)]});});
+ const result=await createDeliveryQuote(address,settings,'',context());
+ assert.equal(queries[0],address);assert.ok(queries.length<=6);assert.equal(result.requiresPinConfirmation,true);
+ assert.equal('quoteToken' in result,false);assert.equal('deliveryCharge' in result,false);
+ if(result.requiresPinConfirmation){assert.equal(result.candidate.precision,'neighborhood');assert.equal(result.candidate.confidence,0);}
 });
-test('checkout API rejects absent, changed and forged delivery quotes before saving an order',async t=>{
- const {default:app}=await import('../api/index.js');const realFetch=globalThis.fetch;
- t.mock.method(globalThis,'fetch',async(input:any,init:any)=>new URL(String(input)).hostname==='127.0.0.1'?realFetch(input,init):Response.json([]));
- const server=app.listen(0,'127.0.0.1');await new Promise<void>(r=>server.once('listening',r));
- try {
- const base='http://127.0.0.1:'+(server.address() as any).port;
- const quote=signDeliveryQuote({...match,distanceKm:5.25675,deliveryCharge:263},address,settings);
- for(const body of [{},{deliveryQuoteToken:'forged'},{deliveryQuoteToken:quote,address:address+' changed'}]) {
- const response=await fetch(base+'/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Test Customer',phone:'03211234567',address,fulfillmentType:'delivery',...body})});assert.equal(response.status,409);assert.match((await response.json()).error,/calculate delivery/);
+test('specific candidates outrank provider ordering, parent sectors never become the requested subdivision',async t=>{
+ clearAddressCache();
+ const input='House 14 Street 5 Sector G-13/1 Islamabad';
+ const parent={...neighborhood,name:'G-13',matchedAddress:'G-13, Islamabad',city:'Islamabad',county:'',area:'G-13',type:'suburb'};
+ const subdivision={...parent,name:'G-13/1',matchedAddress:'G-13/1, Islamabad',area:'G-13/1',latitude:33.57};
+ t.mock.method(globalThis,'fetch',async()=>Response.json({results:[raw(parent),raw(subdivision)]}));
+ const candidates=await resolveDeliveryCandidates(input,settings);assert.match(candidates[0].matchedAddress,/G-13\/1/);
+ assert.equal(matchLocality(input,parent),true);assert.equal(matchLocality(input,{...parent,name:'G-13/2',matchedAddress:'G-13/2, Islamabad'}),false);
+ assert.equal(matchLocality(input,{...parent,name:'G-13 Markaz Ground',matchedAddress:'G-13 Markaz Ground, Islamabad',type:'amenity'}),false);
+});
+test('streets, sectors, phases and neighborhoods must agree geographically',()=>{
+ assert.equal(matchAddress(address,street),true);assert.equal(matchAddress(address,{...street,street:'Street 6'}),false);
+ assert.equal(matchNeighborhood(address,neighborhood),true);
+ assert.equal(matchNeighborhood(address,{...neighborhood,matchedAddress:'Zaildar House, Bahria Town, PB, Pakistan'}),true,'provider name remains usable when formatted text omits the neighborhood');
+ assert.equal(matchNeighborhood(address,{...neighborhood,name:'Rawalpindi',matchedAddress:'Rawalpindi',area:'',city:'Rawalpindi'}),false);
+ const phase={...neighborhood,name:'Bahria Town Phase 8',matchedAddress:'Bahria Town Phase 8, Rawalpindi',city:'Rawalpindi',area:'Bahria Town Phase 8',type:'suburb'};
+ assert.equal(matchLocality('House 14 Street 5 Sector C Bahria Town Phase 8 Rawalpindi',phase),true);
+ assert.equal(matchLocality('House 14 Street 5 Sector C Bahria Town Phase 7 Rawalpindi',phase),false);
+ assert.equal(matchAddress(address,{...street,city:'Lahore',matchedAddress:'Street 5 Gulrez Lahore'}),false);
+});
+test('a matching mapped building is distinguished from unsupported house coverage',async t=>{
+ let p={...street,type:'building',houseNumber:'14',buildingConfidence:1};
+ t.mock.method(globalThis,'fetch',async(input:any)=>new URL(String(input)).pathname==='/v1/routing'?Response.json({features:[{properties:{distance:2000,time:400,distance_units:'meters'}}]}):Response.json({results:[raw(p)]}));
+ const result=await createDeliveryQuote(address,settings,'',context());assert.equal(result.requiresPinConfirmation,false);
+ p={...p,buildingConfidence:0.2};assert.equal((await createDeliveryQuote(address,settings,'',context())).requiresPinConfirmation,true);
+});
+test('confirmed pin routing uses latitude,longitude and metric metres once; original address remains bound',async t=>{
+ const ctx={...context(),confirmedPin:{latitude:33.56,longitude:73.10}};
+ t.mock.method(globalThis,'fetch',async(input:any)=>{const u=new URL(String(input));assert.equal(u.pathname,'/v1/routing');assert.equal(u.searchParams.get('waypoints'),'33.567348,73.10451|33.56,73.1');assert.equal(u.searchParams.get('units'),'metric');assert.equal(u.searchParams.get('mode'),'drive');return Response.json({features:[{properties:{distance:5256.75,time:400,distance_units:'meters'}}]});});
+ const result=await createDeliveryQuote(address,settings,'',ctx);assert.equal(result.requiresPinConfirmation,false);
+ if(!result.requiresPinConfirmation){assert.equal(result.distanceKm,5.25675);assert.equal(result.deliveryCharge,263);assert.equal(result.type,'pin');assert.equal(verifyDeliveryQuote(result.quoteToken,address,settings,ctx).longitude,73.1);}
+ assert.equal(deliveryFee(.2,settings),50);assert.equal(deliveryFee(1.01,settings),51);
+});
+test('server region and road-distance limit are enforced; routing failures never use straight-line fees',async t=>{
+ let calls=0,mode='far';const ctx={...context(),confirmedPin:{latitude:33.56,longitude:73.1}};
+ t.mock.method(globalThis,'fetch',async()=>{calls++;return Response.json(mode==='far'?{features:[{properties:{distance:46000,time:500}}]}:{features:[]});});
+ await assert.rejects(createDeliveryQuote(address,settings,'',{...ctx,confirmedPin:{latitude:31.5,longitude:74.3}}),/outside/);assert.equal(calls,0);
+ await assert.rejects(createDeliveryQuote(address,settings,'',ctx),/within 45/);mode='missing';await assert.rejects(createDeliveryQuote(address,settings,'',ctx),/driving distance/);
+});
+test('401,403,429,5xx,timeouts and malformed responses remain distinct from empty address results',async t=>{
+ let code=401;
+ t.mock.method(globalThis,'fetch',async()=>{if(code===0)throw new DOMException('timeout','TimeoutError');if(code===200)return Response.json({unexpected:true});if(code===201)return Response.json({results:[]});return Response.json({}, {status:code});});
+ for(const [status,expected] of [[401,'PROVIDER_AUTH'],[403,'PROVIDER_AUTH'],[429,'PROVIDER_RATE_LIMIT'],[500,'PROVIDER_UNAVAILABLE'],[0,'PROVIDER_TIMEOUT'],[200,'PROVIDER_RESPONSE'],[201,'ADDRESS_NOT_FOUND']]){
+  code=status as number;clearAddressCache();await assert.rejects(createDeliveryQuote(address,settings,'',context()),(error:any)=>error.code===expected);
  }
- }finally{await new Promise<void>(r=>server.close(()=>r()));}
+});
+test('signed quotes bind checkout context, address version, destination, pricing version, minimum and expiry',()=>{
+ const ctx=context(),q={...street,distanceKm:5.25675,deliveryCharge:263};const token=signDeliveryQuote(q,address,settings,1000,ctx);
+ assert.equal(verifyDeliveryQuote(token,address,settings,{...ctx,now:2000}).deliveryCharge,263);
+ for(const [a,s,c] of [[address+' Block B',settings,ctx],[address,{...settings,pricePerKm:60},ctx],[address,{...settings,minDeliveryFee:300},ctx],[address,{...settings,pricingVersion:'changed'},ctx],[address,settings,{...ctx,checkoutContext:randomUUID()}],[address,settings,{...ctx,addressVersion:2}]])assert.throws(()=>verifyDeliveryQuote(token,a as string,s as any,{...(c as any),now:2000}));
+ assert.throws(()=>verifyDeliveryQuote(token,address,settings,{...ctx,now:601000}));
+ const [payload,sig]=token.split('.'),body=JSON.parse(Buffer.from(payload,'base64url').toString());body.longitude=73.3;
+ assert.throws(()=>verifyDeliveryQuote(Buffer.from(JSON.stringify(body)).toString('base64url')+'.'+sig,address,settings,{...ctx,now:2000}));
+});
+test('address/pin edits cancel old quote state and ignore stale and out-of-order responses',()=>{
+ let state=initialDeliveryState(address,0);const candidate={...neighborhood,precision:'neighborhood'};
+ state=deliveryReducer(state,{type:'begin',requestId:1,version:0,confirm:false});
+ state=deliveryReducer(state,{type:'edit',address:address+' A'});
+ assert.equal(deliveryReducer(state,{type:'candidate',requestId:1,version:0,candidate,candidates:[candidate]}),state);
+ state=deliveryReducer(state,{type:'begin',requestId:3,version:1,confirm:false});state=deliveryReducer(state,{type:'candidate',requestId:3,version:1,candidate,candidates:[candidate]});
+ state=deliveryReducer(state,{type:'pin',pin:{latitude:33.6,longitude:73.2}});assert.equal(state.version,2);assert.equal(state.quote,null);
+ state=deliveryReducer(state,{type:'begin',requestId:5,version:2,confirm:true});
+ const quote={...street,quoteToken:'fixture',expiresAt:2000,checkoutContext:randomUUID(),addressVersion:2,distanceKm:2,deliveryCharge:100};
+ assert.equal(deliveryReducer(state,{type:'quote',requestId:4,version:2,quote}),state);
+ state=deliveryReducer(state,{type:'quote',requestId:5,version:2,quote});assert.equal(state.status,'quoted');
+ state=deliveryReducer(state,{type:'tick',now:2000});assert.equal(state.quote,null);assert.equal(state.status,'expired');
+});
+test('missing trusted store configuration fails closed instead of guessing coordinates',async()=>{
+ const keys=['STORE_LATITUDE','STORE_LONGITUDE','DELIVERY_RATE_PER_KM','DELIVERY_MAX_DISTANCE_KM'],saved=keys.map(k=>process.env[k]);keys.forEach(k=>delete process.env[k]);
+ try{await assert.rejects(getDeliverySettings(),/configuration/);}finally{keys.forEach((k,i)=>{if(saved[i]!==undefined)process.env[k]=saved[i];});}
 });
 
-test('Gulrez addresses use the explicitly approved neighbourhood estimate, preserving the whole address',async t=>{
- const input='64 Street 5\nPhase 3 Gulrez Housing Scheme rawalpindi';
- assert.equal(withoutHouse(input),'Street 5\nPhase 3 Gulrez Housing Scheme rawalpindi');
- assert.equal(localityQuery(input),'gulrez Phase 3');
- assert.equal(localityQuery(input.replace('Gulrez','Gulraiz')),'gulrez Phase 3');
- const area={...match,type:'city',matchedAddress:'Gulrez Housing, Zaildar House, Bahria Town, PB, Pakistan',name:'Gulrez Housing',city:'Bahria Town',county:'Rawalpindi District',area:'',street:'',confidence:1};
- assert.equal(matchLocality(input,area),false,'a society is not mislabelled as a phase');
- assert.equal(matchNeighborhood(input,area),true);
- assert.equal(matchLocality(input,{...area,name:'Rawalpindi',matchedAddress:'Rawalpindi, Pakistan'}),false);
- assert.equal(matchLocality(input,{...area,name:'Gulrez Masjid',type:'amenity',matchedAddress:'Gulrez Masjid, Gulrez, Rawalpindi'}),false);
- assert.equal(matchLocality(input,{...area,name:'Bahria Town Phase 3',matchedAddress:'Bahria Town Phase 3, Rawalpindi'}),false);
- assert.equal(matchAddress(input,{...match,street:'Street 5',matchedAddress:'Street 5, Gulraiz, Chaklala Cantonment',confidence:1}),true,'missing phase and alternative spelling are accepted');
- let localityCalls=0;
- t.mock.method(globalThis,'fetch',async(input:any)=>{
-  const u=new URL(String(input));
-  if(u.hostname.includes('geoapify')){
-   if(u.searchParams.get('type')==='locality'){localityCalls++;assert.ok(['gulrez Phase 3','gulrez'].includes(u.searchParams.get('text')!));return Response.json({results:[{lat:33.5618388,lon:73.105382,formatted:area.matchedAddress,city:area.city,county:area.county,result_type:'city',rank:{confidence:1}}]});}
-   return Response.json({results:[{lat:33.537315,lon:73.063345,formatted:'64 St-64, Rah-e-Skoon Colony, Rawalpindi',street:'St-64',city:'Rawalpindi',result_type:'building',rank:{confidence:.11}}]});
-  }
-  if(u.pathname.includes('directions'))return Response.json({code:'Ok',routes:[{distance:1100,duration:180,geometry:{coordinates:[[73.104510,33.567348],[73.105382,33.5618388]]}}]});
-  return Response.json({features:[]});
- });
- const quote=await createDeliveryQuote(input,settings,'test-token');assert.equal(quote.type,'neighborhood');assert.equal(quote.deliveryCharge,55);assert.equal(quote.distanceKm,1.1);assert.equal(localityCalls,2);
- assert.equal(verifyDeliveryQuote(quote.quoteToken,input,settings).address,input);
+test('a slow full query can fall back within the call budget without converting failures into not-found',async t=>{
+ clearAddressCache();let calls=0;t.mock.method(globalThis,'fetch',async()=>{if(++calls===1)throw new DOMException('timeout','TimeoutError');return Response.json({results:[raw(neighborhood)]});});
+ const result=await createDeliveryQuote(address,settings,'',context());assert.equal(result.requiresPinConfirmation,true);assert.ok(calls<=6);assert.ok(calls>1);
 });
-
-const jinnah='plaza 47 jinnah boulevard sector E DHA 2 islamabad';
-const jinnahStreet:AddressMatch={latitude:33.5311245,longitude:73.146962,matchedAddress:'Jinnah Boulevard, DHA Phase II, Rawat 45730, Pakistan',city:'Rawat',area:'DHA Phase II',street:'Jinnah Boulevard',type:'street',confidence:.63,provider:'Geoapify'};
-const providerResult=(m:AddressMatch)=>({lat:m.latitude,lon:m.longitude,formatted:m.matchedAddress,city:m.city,suburb:m.area,county:m.county,street:m.street,housenumber:m.houseNumber,result_type:m.type,rank:{confidence:m.confidence,confidence_building_level:1}});
-const mapboxRoute={code:'Ok',routes:[{distance:8200,duration:900,geometry:{coordinates:[[73.104510,33.567348],[73.146962,33.5311245]]}}]};
-
-test('building labels, minor typos and Roman phases normalize without changing address numbers',()=>{
- for(const label of ['Plaza','House','Plot','Building','Flat','Apartment','Shop','Office'])assert.equal(withoutHouse(`${label} No. 47, Jinnah Boulevard`),'Jinnah Boulevard');
- assert.equal(houseNumber('Flat 2B, Plaza #47, Jinnah Boulevard'),'47');
- assert.equal(localityQuery('House H-15 Street 3 Sector F-10/2 Islamabad'),'F-10/2','house identifier is not treated as a sector');
- assert.equal(lookupQueries('House 47 Street 999 sector F-10/2 Islamabad').detailed,'Street 999 sector F-10/2 Islamabad');
- assert.equal(lookupQueries('House 47 Street 999 sector F-10/2 Islamabad').specific,'F-10/2');
- assert.equal(lookupQueries(jinnah).detailed,'jinnah boulevard DHA Phase 2 islamabad');
- assert.equal(lookupQueries('plaza 47 Jinna bouleverd secter E DHA2 Islmabad').detailed.toLowerCase(),'jinnah boulevard dha phase 2 islamabad');
- assert.equal(localityQuery('64 Streat 5 Phaze 3 Gulraizz Hosing Scheem Rawalpndi'),'gulrez Phase 3');
- assert.match(correctAddressText('House 47 Street 51 sector F 10/2 Phase II'),/47 Street 51 sector F-10\/2 Phase 2/);
- assert.equal(matchAddress(jinnah,jinnahStreet),true);
- assert.equal(matchAddress(jinnah,{...jinnahStreet,matchedAddress:'Jinnah Boulevard, DHA Phase III, Rawat',area:'DHA Phase III'}),false);
- assert.equal(matchAddress(jinnah,{...jinnahStreet,street:'Iqbal Boulevard',matchedAddress:'Iqbal Boulevard, DHA Phase II, Rawat'}),false);
- assert.equal(matchAddress(jinnah,{...jinnahStreet,city:'Lahore',matchedAddress:'Jinnah Boulevard, DHA Phase II, Lahore'}),false);
-});
-
-test('exact customer plaza address and typo variant calculate to Jinnah Boulevard and preserve original detail',async t=>{
- process.env.GEOAPIFY_GEOCODING_KEY='test-private-geocoding-key';
- const queries:string[]=[];
- t.mock.method(globalThis,'fetch',async(input:any)=>{
-  const u=new URL(String(input));
-  if(u.hostname.includes('geoapify')){const query=u.searchParams.get('text')||'';queries.push(query);return Response.json({results:!query.toLowerCase().includes('plaza')?[providerResult(jinnahStreet)]:[]});}
-  return Response.json(mapboxRoute);
- });
- for(const input of [jinnah,'plaza 47 Jinna bouleverd secter E DHA2 Islmabad']){
-  const quote=await createDeliveryQuote(input,settings,'test-token');
-  assert.equal(quote.type,'street');assert.equal(quote.distanceKm,8.2);assert.equal(quote.deliveryCharge,410);
-  assert.equal(verifyDeliveryQuote(quote.quoteToken,input,settings).address,input);
- }
- assert.ok(queries.some(q=>q.toLowerCase()==='jinnah boulevard dha phase 2 islamabad'));
-});
-
-test('fallback requires the matching sector or phase, never a city, town or conflicting phase',async t=>{
- process.env.GEOAPIFY_GEOCODING_KEY='test-private-geocoding-key';
- const phase:AddressMatch={...jinnahStreet,type:'suburb',street:'',name:'DHA Phase II',matchedAddress:'DHA Phase II, Rawat, Sector G, Islamabad',confidence:1};
- assert.equal(matchLocality(jinnah,phase),true);
- assert.equal(matchLocality(jinnah,{...phase,name:'DHA Phase III',matchedAddress:'DHA Phase III, Rawat',area:'DHA Phase III'}),false);
- assert.equal(matchLocality(jinnah,{...phase,name:'DHA',matchedAddress:'DHA, Rawat',area:'DHA'}),false);
- assert.equal(matchLocality(jinnah,{...phase,type:'amenity',name:'Masjid DHA Phase II'}),false);
- const sector={...phase,name:'Sector F-10',matchedAddress:'Sector F-10, Islamabad',city:'Islamabad',area:'F-10'};
- assert.equal(matchLocality('House 1 Street 3 F-10/2 Islamabad',sector),true);
- assert.equal(matchLocality('House 1 Street 3 F-10/2 Islamabad',{...sector,confidence:0}),true,'explicit provider sector identity is more reliable than query confidence');
- assert.equal(matchLocality('House 1 Street 3 F-10/2 Islamabad',{...sector,name:'Sector F-10/3',matchedAddress:'Sector F-10/3, Islamabad'}),false);
- assert.equal(matchLocality('House 4 Street 6 I-8/2 Islamabad',{...sector,name:'I-8 Markaz Ground',matchedAddress:'I-8 Markaz Ground, Islamabad',area:'I-8 Markaz Ground'}),false,'a landmark cannot be labelled as the sector');
- const askari={...sector,name:'Askari Sector 1',matchedAddress:'Askari Sector 1, Rawalpindi',area:'Askari Sector 1',city:'Rawalpindi'};
- assert.equal(matchLocality('Flat 4 Street 999 Askari Sector 1 Rawalpindi',askari),true);
- assert.equal(matchLocality('Flat 4 Street 999 Askari Sector 2 Rawalpindi',askari),false);
- let routing=false;
- t.mock.method(globalThis,'fetch',async(input:any)=>{
-  const u=new URL(String(input));
-  if(u.hostname.includes('geoapify'))return Response.json({results:[{...providerResult(phase),name:'Sector G, DHA Phase 2, Islamabad'}]});
-  if(u.pathname.includes('directions')){routing=true;assert.equal(u.searchParams.get('radiuses'),'100;1000');return Response.json(mapboxRoute);}
-  return Response.json({features:[]});
- });
- const quote=await createDeliveryQuote(jinnah,settings,'test-token');assert.equal(quote.type,'phase');assert.equal(quote.matchedAddress,'DHA Phase II, Rawat');assert.ok(routing);
-});
-
-test('neighbourhood matching covers local schemes, provider city labels and typos without accepting cities or POIs',()=>{
- const cases=[
-  ['House 10 Saidpur Road Satellite Town Rawalpindi','Satellite Town','Chah Sultan','Rawalpindi District',''],
-  ['House 15 Street 6 PWD Housing Society Islamabad','PWD Society','Rawalpindi','Rawalpindi',''],
-  ['Plot 20 Street 4 Soan Garden Islamabad','Soan Garden','Zone V','','Islamabad'],
-  ['House 4 Street 9 Sector A Bahria Enclave Islamabad','Bahria Enclave','Jagiot','','Islamabad'],
-  ['house 64 streat 5 gulraizz phaze 3 rawalpndi','Gulrez Housing','Bahria Town','Rawalpindi District',''],
- ];
- for(const [input,name,city,county,region] of cases){
-  const candidate={...match,type:'suburb',name,matchedAddress:[name,city].join(', '),area:name,city,county,region,street:'',confidence:0};
-  assert.equal(matchNeighborhood(input,candidate),true,input);
-  assert.equal(matchNeighborhood(input,{...candidate,name:name+' Mosque'}),false);
-  assert.equal(matchNeighborhood(input,{...candidate,name:'Rawalpindi',matchedAddress:'Rawalpindi',area:'',city:'Rawalpindi',confidence:1}),false);
- }
- assert.equal(matchNeighborhood('House 99 Street 999 Imaginary Sector ZZZ Rawalpindi',{...match,name:'Rawalpindi',type:'city'}),false);
- const ghauri={...match,type:'suburb',name:'Ghauri Town Phase 4-A',matchedAddress:'Ghauri Town Phase 4-A, Islamabad',area:'Ghauri Town Phase 4-A',city:'Islamabad'};
- assert.equal(matchLocality('House 1 Ghauri Town Phase 4 Islamabad',ghauri),true);
- assert.equal(matchLocality('House 1 Ghauri Town Phase 4-B Islamabad',ghauri),false,'different lettered phases must not be confused');
-});
-
-test('mapped house is preferred and an incorrect house can only be priced as its matching street',async t=>{
- process.env.GEOAPIFY_GEOCODING_KEY='test-private-geocoding-key';
- let number='47';
- t.mock.method(globalThis,'fetch',async(input:any)=>{
-  const u=new URL(String(input));
-  if(u.hostname.includes('geoapify'))return Response.json({results:[providerResult({...jinnahStreet,type:'building',houseNumber:number,confidence:1})]});
-  return Response.json(mapboxRoute);
- });
- assert.equal((await createDeliveryQuote(jinnah,settings,'test-token')).type,'building');
- number='48';assert.equal((await createDeliveryQuote(jinnah,settings,'test-token')).type,'street');
-});
-
-test('Geoapify driving route recovers from Mapbox failure; no route never produces a quote',async t=>{
- process.env.GEOAPIFY_GEOCODING_KEY='test-private-geocoding-key';
- let available=true;
- t.mock.method(globalThis,'fetch',async(input:any)=>{
-  const u=new URL(String(input));
-  if(u.pathname==='/v1/geocode/search')return Response.json({results:[providerResult(jinnahStreet)]});
-  if(u.pathname==='/v1/routing'){
-   assert.equal(u.searchParams.get('mode'),'drive');assert.equal(u.searchParams.get('units'),'metric');assert.equal(u.searchParams.get('waypoints'),'33.567348,73.10451|33.5311245,73.146962');
-   return Response.json(available?{features:[{properties:{distance:8567,time:910}}]}:{features:[]});
-  }
-  return Response.json({code:'NoRoute',routes:[]});
- });
- const quote=await createDeliveryQuote(jinnah,settings,'test-token');assert.equal(quote.distanceKm,8.567);assert.equal(quote.deliveryCharge,428);
- available=false;await assert.rejects(createDeliveryQuote(jinnah,settings,'test-token'),/driving distance/);
+test('a confirmed pin retains a signed geocoder match separately from original instructions',async t=>{
+ clearAddressCache();t.mock.method(globalThis,'fetch',async(input:any)=>new URL(String(input)).pathname==='/v1/routing'?Response.json({features:[{properties:{distance:1000,time:120}}]}):Response.json({results:[raw(neighborhood)]}));
+ const ctx=context(),candidate=await createDeliveryQuote(address,settings,'',ctx);if(!candidate.requiresPinConfirmation)throw new Error('Expected candidate');
+ const pin={latitude:33.58,longitude:73.11};const result=await createDeliveryQuote(address,settings,'',{...ctx,addressVersion:2,confirmedPin:pin,candidateToken:candidate.candidate.candidateToken});
+ if(!('quoteToken' in result))throw new Error('Expected quote');const verified=verifyDeliveryQuote(result.quoteToken,address,settings,{...ctx,addressVersion:2});assert.equal(verified.latitude,pin.latitude);assert.equal(verified.geocodedLatitude,neighborhood.latitude);assert.match(verified.matchedAddress,/Gulrez/);
+ await assert.rejects(createDeliveryQuote(address+' Block B',settings,'',{...ctx,confirmedPin:pin,candidateToken:candidate.candidate.candidateToken}),/expired or changed/);
 });

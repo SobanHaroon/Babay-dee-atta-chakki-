@@ -1,3 +1,4 @@
+import { isPurchasable, productLabel } from "../lib/catalogPresentation";
 import React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Product, CartItem } from "../types";
@@ -106,7 +107,7 @@ export function WishlistDrawer({
                           <h4
                             className="text-xs font-black text-slate-900 dark:text-slate-100 hover:text-[#3b4414] dark:hover:text-amber-400 line-clamp-1"
                           >
-                            {p.name}
+                            {productLabel(p)}
                           </h4>
                           <button
                             onClick={(e) => {
@@ -127,6 +128,7 @@ export function WishlistDrawer({
 
                       <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
                         <button
+                          disabled={!isPurchasable(p)}
                           onClick={(e) => {
                             e.stopPropagation();
                             triggerHapticFeedback(30);

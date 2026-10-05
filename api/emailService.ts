@@ -121,20 +121,7 @@ export function isEmailServiceConfigured(): {
 }
 
 // In-memory store for development preview of generated email receipts
-interface ReceiptLog {
-  id: string;
-  orderId: string;
-  recipient: string;
-  subject: string;
-  sentAt: string;
-  provider: string;
-  status: "delivered" | "simulated" | "failed";
-  html: string;
-  text: string;
-  error?: string;
-}
 
-export const EMAIL_RECEIPT_LOGS: ReceiptLog[] = [];
 
 /**
  * Formats a currency amount into Pakistani Rupees (Rs.)
@@ -162,7 +149,7 @@ export async function sendOrderConfirmationEmail(
   const recipientEmail = (customerEmailOverride || order.customer?.email || order.email || "").trim();
 
   if (!recipientEmail || !recipientEmail.includes("@")) {
-    console.log(`[Email Service] Order ${order.id} placed without recipient email.`);
+    console.log(JSON.stringify({event:'email_delivery_status'}));
     return {
       success: true,
       delivered: false,
@@ -184,7 +171,7 @@ export async function sendOrderConfirmationEmail(
   if (resend) {
     try {
       const fromAddress = getSenderEmail();
-      console.log(`[Email Service] Dispatching receipt via Resend API (${fromAddress}) to: ${recipientEmail} for order: ${orderId}`);
+      console.log(JSON.stringify({event:'email_delivery_status'}));
       const sendResult = await resend.emails.send({
         from: fromAddress,
         to: recipientEmail,
@@ -194,20 +181,7 @@ export async function sendOrderConfirmationEmail(
       });
 
       if (sendResult.error) {
-        console.error("[Email Service] Resend API error:", sendResult.error);
-        const logEntry: ReceiptLog = {
-          id: `log-${Date.now()}`,
-          orderId,
-          recipient: recipientEmail,
-          subject,
-          sentAt: new Date().toISOString(),
-          provider: "resend",
-          status: "failed",
-          html: htmlContent,
-          text: textContent,
-          error: sendResult.error.message
-        };
-        EMAIL_RECEIPT_LOGS.unshift(logEntry);
+        console.error(JSON.stringify({event:'email_delivery_error'}));
 
         return {
           success: false,
@@ -221,19 +195,7 @@ export async function sendOrderConfirmationEmail(
         };
       }
 
-      console.log(`[Email Service] Receipt successfully dispatched via Resend! Message ID: ${sendResult.data?.id}`);
-      const logEntry: ReceiptLog = {
-        id: `log-${Date.now()}`,
-        orderId,
-        recipient: recipientEmail,
-        subject,
-        sentAt: new Date().toISOString(),
-        provider: "resend",
-        status: "delivered",
-        html: htmlContent,
-        text: textContent
-      };
-      EMAIL_RECEIPT_LOGS.unshift(logEntry);
+      console.log(JSON.stringify({event:'email_delivery_status'}));
 
       return {
         success: true,
@@ -246,7 +208,7 @@ export async function sendOrderConfirmationEmail(
         html: htmlContent
       };
     } catch (err: any) {
-      console.error("[Email Service] Exception dispatching via Resend:", err);
+      console.error(JSON.stringify({event:'email_delivery_error'}));
       return {
         success: false,
         delivered: false,
@@ -264,7 +226,7 @@ export async function sendOrderConfirmationEmail(
   const gmailTransporter = getGmailTransporter();
   if (gmailTransporter) {
     try {
-      console.log(`[Email Service] Dispatching receipt via Gmail SMTP (${GMAIL_USER}) to: ${recipientEmail} for order: ${orderId}`);
+      console.log(JSON.stringify({event:'email_delivery_status'}));
       const info = await gmailTransporter.sendMail({
         from: `Babay Dee Atta Chakki <${GMAIL_USER}>`,
         to: recipientEmail,
@@ -273,19 +235,7 @@ export async function sendOrderConfirmationEmail(
         text: textContent,
       });
 
-      console.log(`[Email Service] Receipt successfully sent via Gmail SMTP! Message ID: ${info.messageId}`);
-      const logEntry: ReceiptLog = {
-        id: `log-${Date.now()}`,
-        orderId,
-        recipient: recipientEmail,
-        subject,
-        sentAt: new Date().toISOString(),
-        provider: "gmail",
-        status: "delivered",
-        html: htmlContent,
-        text: textContent
-      };
-      EMAIL_RECEIPT_LOGS.unshift(logEntry);
+      console.log(JSON.stringify({event:'email_delivery_status'}));
 
       return {
         success: true,
@@ -298,20 +248,7 @@ export async function sendOrderConfirmationEmail(
         html: htmlContent
       };
     } catch (err: any) {
-      console.error("[Email Service] Exception dispatching via Gmail SMTP:", err);
-      const logEntry: ReceiptLog = {
-        id: `log-${Date.now()}`,
-        orderId,
-        recipient: recipientEmail,
-        subject,
-        sentAt: new Date().toISOString(),
-        provider: "gmail",
-        status: "failed",
-        html: htmlContent,
-        text: textContent,
-        error: err.message
-      };
-      EMAIL_RECEIPT_LOGS.unshift(logEntry);
+      console.error(JSON.stringify({event:'email_delivery_error'}));
 
       return {
         success: false,
@@ -330,7 +267,7 @@ export async function sendOrderConfirmationEmail(
   const smtpTransporter = getSmtpTransporter();
   if (smtpTransporter) {
     try {
-      console.log(`[Email Service] Dispatching receipt via SMTP (${SMTP_HOST}:${SMTP_PORT}) to: ${recipientEmail} for order: ${orderId}`);
+      console.log(JSON.stringify({event:'email_delivery_status'}));
       const info = await smtpTransporter.sendMail({
         from: SMTP_FROM,
         to: recipientEmail,
@@ -339,19 +276,7 @@ export async function sendOrderConfirmationEmail(
         text: textContent,
       });
 
-      console.log(`[Email Service] Receipt successfully sent via SMTP! Message ID: ${info.messageId}`);
-      const logEntry: ReceiptLog = {
-        id: `log-${Date.now()}`,
-        orderId,
-        recipient: recipientEmail,
-        subject,
-        sentAt: new Date().toISOString(),
-        provider: "smtp",
-        status: "delivered",
-        html: htmlContent,
-        text: textContent
-      };
-      EMAIL_RECEIPT_LOGS.unshift(logEntry);
+      console.log(JSON.stringify({event:'email_delivery_status'}));
 
       return {
         success: true,
@@ -364,20 +289,7 @@ export async function sendOrderConfirmationEmail(
         html: htmlContent
       };
     } catch (err: any) {
-      console.error("[Email Service] Exception dispatching via SMTP:", err);
-      const logEntry: ReceiptLog = {
-        id: `log-${Date.now()}`,
-        orderId,
-        recipient: recipientEmail,
-        subject,
-        sentAt: new Date().toISOString(),
-        provider: "smtp",
-        status: "failed",
-        html: htmlContent,
-        text: textContent,
-        error: err.message
-      };
-      EMAIL_RECEIPT_LOGS.unshift(logEntry);
+      console.error(JSON.stringify({event:'email_delivery_error'}));
 
       return {
         success: false,
@@ -393,19 +305,7 @@ export async function sendOrderConfirmationEmail(
   }
 
   // 4. Fallback: No live email provider is configured
-  console.log(`[Email Service] Digital invoice generated in simulation mode for order ${orderId} (${recipientEmail}).`);
-  const logEntry: ReceiptLog = {
-    id: `log-${Date.now()}`,
-    orderId,
-    recipient: recipientEmail,
-    subject,
-    sentAt: new Date().toISOString(),
-    provider: "simulated",
-    status: "simulated",
-    html: htmlContent,
-    text: textContent
-  };
-  EMAIL_RECEIPT_LOGS.unshift(logEntry);
+  console.log(JSON.stringify({event:'email_delivery_status'}));
 
   return {
     success: true,
@@ -420,47 +320,3 @@ export async function sendOrderConfirmationEmail(
   };
 }
 
-/**
- * Sends a test confirmation receipt to verify email delivery setup
- */
-export async function sendTestEmail(targetEmail: string = "karpeter09@gmail.com"): Promise<EmailDispatchResult> {
-  const cleanEmail = (targetEmail || "").trim();
-  if (!cleanEmail || !cleanEmail.includes("@")) {
-    return {
-      success: false,
-      delivered: false,
-      configured: isEmailServiceConfigured().configured,
-      message: "Please specify a valid test email address.",
-      provider: "none",
-      recipient: cleanEmail
-    };
-  }
-
-  const testOrder = {
-    id: `BDEC-TEST-${Math.floor(1000 + Math.random() * 9000)}`,
-    fulfillmentType: "delivery",
-    customer: {
-      name: "Valued Customer (Test)",
-      phone: "03215010846",
-      email: cleanEmail,
-      address: "House 14, Street 7, Gulraiz Phase 3",
-      city: "Rawalpindi",
-      area: "Gulraiz Phase 3"
-    },
-    items: [
-      { name: "Desi Chakki Whole Wheat Atta (Stone-Ground)", price: 170, quantity: 10, unit: "kg" },
-      { name: "Super Basmati Kainat 1121 Steam Rice", price: 420, quantity: 2, unit: "kg" },
-      { name: "Traditional Roasted Multigrain Diet Atta", price: 290, quantity: 2, unit: "kg" }
-    ],
-    paymentMethod: "Cash on Delivery",
-    subtotal: 3120,
-    deliveryCharges: 150,
-    total: 3270,
-    deliveryDate: new Date().toISOString().split("T")[0],
-    deliverySlot: "Express Same-Day (1-3 hrs)",
-    status: "order placed",
-    createdAt: new Date().toISOString()
-  };
-
-  return await sendOrderConfirmationEmail(testOrder, cleanEmail);
-}

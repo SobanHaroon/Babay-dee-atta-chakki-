@@ -69,34 +69,8 @@ test('denied device permission rejects without substituting a store or IP locati
   await assert.rejects(detectDeviceLocation(), /permission is blocked/); assert.equal(cleared, true);
 });
 
-test('route API preserves exact pin, uses road fee, and rejects invalid coordinates or provider outages', async t => {
-  const previousToken = process.env.MAPBOX_ACCESS_TOKEN;
-  process.env.MAPBOX_ACCESS_TOKEN = 'pk.test';
-  t.after(() => { if (previousToken === undefined) delete process.env.MAPBOX_ACCESS_TOKEN; else process.env.MAPBOX_ACCESS_TOKEN = previousToken; });
-  const { default: app } = await import('../api/index.js');
-  const server = app.listen(0, '127.0.0.1');
-  await new Promise<void>(resolve => server.once('listening', resolve));
-  const base = 'http://127.0.0.1:' + (server.address() as { port: number }).port;
-  const realFetch = globalThis.fetch;
-  let outage = false;
-  t.mock.method(globalThis, 'fetch', async (input: any, init?: any) => {
-    const url = String(input);
-    if (url.startsWith(base)) return realFetch(input, init);
-    if (url.includes('supabase')) return Response.json([{ store_latitude: 33.567348, store_longitude: 73.104510, price_per_km: 50, max_delivery_distance_km: 20 }]);
-    if (url.includes('/directions/')) return outage ? new Response('', { status: 503 }) : Response.json({ code: 'Ok', routes: [{ distance: 3250, duration: 601, geometry: { coordinates: [[73.104510, 33.567348], [73.011234, 33.681234]] } }] });
-    if (url.includes('/reverse')) return Response.json({ features: [feature] });
-    throw new Error('Unexpected upstream');
-  });
-  const post = (body: any) => fetch(base + '/api/delivery/calculate-route', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  try {
-    for (const body of [{}, { latitude: 999, longitude: 73 }, { latitude: '33junk', longitude: 73 }]) assert.equal((await post(body)).status, 400);
-    const result = await (await post({ latitude: 33.681234, longitude: 73.011234 })).json();
-    assert.equal(result.success, true); assert.equal(result.deliveryCharge, 163);
-    assert.equal(result.customerLocation.lat, 33.681234); assert.equal(result.customerLocation.lng, 73.011234);
-    assert.equal(result.maxDeliveryDistanceKm, 20); assert.equal(result.details.houseNumber, '14-B');
-    outage = true;
-    const failed = await post({ latitude: 33.681234, longitude: 73.011234 });
-    assert.equal(failed.status, 503); const data = await failed.json();
-    assert.equal(data.success, false); assert.equal(data.deliveryCharge, undefined);
-  } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
+test('legacy freeform routing proxy is removed',async()=>{
+ const {default:app}=await import('../api/index.js');const server=app.listen(0,'127.0.0.1');await new Promise<void>(resolve=>server.once('listening',resolve));
+ try{const response=await fetch('http://127.0.0.1:'+(server.address() as any).port+'/api/delivery/calculate-route',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lat:33.5,lng:73.1})});assert.equal(response.status,404);}
+ finally{await new Promise<void>(resolve=>server.close(()=>resolve()));}
 });

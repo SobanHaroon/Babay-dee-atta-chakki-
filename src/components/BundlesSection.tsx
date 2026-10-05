@@ -1,3 +1,4 @@
+import { availableBundle, productLabel } from "../lib/catalogPresentation";
 import React from "react";
 import { Product } from "../types";
 import { ShoppingBag, Sparkles, Plus, Check, Zap, Tag } from "lucide-react";
@@ -11,14 +12,9 @@ interface BundlesSectionProps {
 }
 
 export function BundlesSection({ products, onAddBundleToCart, onSelectProduct }: BundlesSectionProps) {
-  // Find key bundle items: Chakki Atta, Besan, Suji / Lentils
-  const atta = products.find((p) => p.name.toLowerCase().includes("atta") || p.name.toLowerCase().includes("wheat")) || products[0];
-  const besan = products.find((p) => p.name.toLowerCase().includes("besan") || p.name.toLowerCase().includes("gram")) || products[1];
-  const suji = products.find((p) => p.name.toLowerCase().includes("suji") || p.name.toLowerCase().includes("semolina") || p.name.toLowerCase().includes("maida")) || products[2];
+  const bundleItems = availableBundle(products);
+  if (bundleItems.length !== 3) return null;
 
-  if (!atta || !besan || !suji) return null;
-
-  const bundleItems = [atta, besan, suji];
   const totalPrice = bundleItems.reduce((acc, item) => acc + (item.price || 0), 0);
 
   return (
@@ -31,7 +27,7 @@ export function BundlesSection({ products, onAddBundleToCart, onSelectProduct }:
           </span>
           <div>
             <h3 className="font-extrabold text-slate-900 text-base sm:text-lg flex items-center gap-2">
-              Frequently Bought Together
+              Kitchen Essentials
             </h3>
             <p className="text-xs text-slate-600">
               Complete Kitchen Flour Essentials Combo
@@ -54,7 +50,7 @@ export function BundlesSection({ products, onAddBundleToCart, onSelectProduct }:
               <div 
                 onClick={() => onSelectProduct?.(item)}
                 className="bg-white dark:bg-slate-800/80 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-2xs flex flex-col items-center text-center relative group cursor-pointer hover:border-amber-400 hover:shadow-md transition-all"
-                title={`Click to view ${item.name} details`}
+                title={`Click to view ${productLabel(item)} details`}
               >
                 <ProductIcon
                   productId={item.id}
@@ -62,9 +58,9 @@ export function BundlesSection({ products, onAddBundleToCart, onSelectProduct }:
                   size={20}
                   className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl shadow-2xs mb-2 object-cover group-hover:scale-105 transition-transform"
                 />
-                <h4 className="font-bold text-xs text-slate-800 dark:text-slate-200 line-clamp-1 group-hover:text-amber-600 transition-colors">{item.name}</h4>
+                <h4 className="font-bold text-xs text-slate-800 dark:text-slate-200 line-clamp-1 group-hover:text-amber-600 transition-colors">{productLabel(item)}</h4>
                 <span className="text-[11px] font-extrabold text-[#3b4414] dark:text-amber-400 mt-0.5">
-                  Rs. {item.price}
+                  1 {item.unit} ? Rs. {item.price}
                 </span>
                 {idx < 2 && (
                   <div className="absolute -right-3 sm:-right-4 top-1/2 -translate-y-1/2 z-10 w-6 h-6 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-xs shadow-xs hidden sm:flex pointer-events-none">

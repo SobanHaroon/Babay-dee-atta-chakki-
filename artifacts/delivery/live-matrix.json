@@ -1,0 +1,238 @@
+{
+  "testedAt": "2026-09-26T18:10:27.532Z",
+  "base": "http://localhost:3000",
+  "results": [
+    {
+      "address": "house 64 street 5 gulraiz phase 3 rawalpindi",
+      "status": 200,
+      "matchedAddress": "Gulrez Housing, Rawalpindi District",
+      "type": "neighborhood",
+      "latitude": 33.5618388,
+      "longitude": 73.105382,
+      "distanceKm": 0.8763479999999999,
+      "deliveryCharge": 50,
+      "ms": 6424
+    },
+    {
+      "address": "House 12 Street 7 Gulraiz Phase 2 Rawalpindi",
+      "status": 200,
+      "matchedAddress": "Gulrez Housing, Rawalpindi District",
+      "type": "neighborhood",
+      "latitude": 33.5618388,
+      "longitude": 73.105382,
+      "distanceKm": 0.8763479999999999,
+      "deliveryCharge": 50,
+      "ms": 6520
+    },
+    {
+      "address": "Flat 4 Street 8 Bahria Town Phase 8 Rawalpindi",
+      "status": 200,
+      "matchedAddress": "Street 8, Bahria Town Phase-8, Rawalpindi Cantonment, Rawalpindi 45730, Pakistan",
+      "type": "street",
+      "latitude": 33.4877957,
+      "longitude": 73.0977656,
+      "distanceKm": 12.487428,
+      "deliveryCharge": 624,
+      "ms": 3393
+    },
+    {
+      "address": "House 25 Street 10 Bahria Town Phase 7 Rawalpindi",
+      "status": 200,
+      "matchedAddress": "Bahria Town Phase 7, Rawalpindi District",
+      "type": "phase",
+      "latitude": 33.530822,
+      "longitude": 73.1179633,
+      "distanceKm": 6.074595,
+      "deliveryCharge": 304,
+      "ms": 6054
+    },
+    {
+      "address": "House 12 Street 5 DHA Phase 1 Islamabad",
+      "status": 200,
+      "matchedAddress": "DHA Phase 1, Rawalpindi District",
+      "type": "phase",
+      "latitude": 33.5413531,
+      "longitude": 73.0974306,
+      "distanceKm": 4.780816,
+      "deliveryCharge": 239,
+      "ms": 3195
+    },
+    {
+      "address": "plaza 47 jinnah bolevard sector E DHA 2 islamabad",
+      "status": 200,
+      "matchedAddress": "Jinnah Boulevard, DHA Phase II, Rawat 45730, Pakistan",
+      "type": "street",
+      "latitude": 33.5311245,
+      "longitude": 73.146962,
+      "distanceKm": 8.800510000000001,
+      "deliveryCharge": 440,
+      "ms": 3261
+    },
+    {
+      "address": "House 15 Street 3 Sector B DHA Phase 2 Islamabad",
+      "status": 200,
+      "matchedAddress": "DHA Phase II, Rawat",
+      "type": "phase",
+      "latitude": 33.53007,
+      "longitude": 73.1736117,
+      "distanceKm": 11.738732,
+      "deliveryCharge": 587,
+      "ms": 8039
+    },
+    {
+      "address": "House 12 Street 4 Sector F-10/2 Islamabad",
+      "status": 200,
+      "matchedAddress": "F-10, Islamabad",
+      "type": "sector",
+      "latitude": 33.6918206,
+      "longitude": 73.0066844,
+      "distanceKm": 28.855551,
+      "deliveryCharge": 1443,
+      "ms": 9920
+    },
+    {
+      "address": "Flat 5 Street 9 Sector G-11/3 Islamabad",
+      "status": 200,
+      "matchedAddress": "G-11, Islamabad",
+      "type": "sector",
+      "latitude": 33.668893,
+      "longitude": 72.9982898,
+      "distanceKm": 23.196139,
+      "deliveryCharge": 1160,
+      "ms": 6760
+    },
+    {
+      "address": "House 10 Saidpur Road Satellite Town Rawalpindi",
+      "status": 200,
+      "matchedAddress": "Satellite Town, Rawalpindi",
+      "type": "neighborhood",
+      "latitude": 33.638403,
+      "longitude": 73.069693,
+      "distanceKm": 11.202402,
+      "deliveryCharge": 560,
+      "ms": 4258
+    },
+    {
+      "address": "House 4 Street 6 Sector I-8/2 Islamabad",
+      "status": 200,
+      "matchedAddress": "Sector I-8, Islamabad",
+      "type": "sector",
+      "latitude": 33.666523,
+      "longitude": 73.073365,
+      "distanceKm": 18.83058,
+      "deliveryCharge": 942,
+      "ms": 8405
+    },
+    {
+      "address": "Shop 5 Murree Road Saddar Rawalpindi",
+      "status": 200,
+      "matchedAddress": "Murree Road, Arya Mohallah, Saddar 46000, Pakistan",
+      "type": "street",
+      "latitude": 33.6008572,
+      "longitude": 73.0640201,
+      "distanceKm": 6.691128,
+      "deliveryCharge": 335,
+      "ms": 3193
+    },
+    {
+      "address": "House 20 Street 3 Chaklala Scheme 3 Rawalpindi",
+      "status": 200,
+      "matchedAddress": "Street 3, Chaklala Scheme 3, Chaklala Cantonment 46000, Pakistan",
+      "type": "street",
+      "latitude": 33.5895307,
+      "longitude": 73.085304,
+      "distanceKm": 3.628144,
+      "deliveryCharge": 181,
+      "ms": 3033
+    },
+    {
+      "address": "House 15 Street 6 PWD Housing Society Islamabad",
+      "status": 200,
+      "matchedAddress": "PWD Society, Rawalpindi",
+      "type": "neighborhood",
+      "latitude": 33.574868,
+      "longitude": 73.144917,
+      "distanceKm": 5.758001,
+      "deliveryCharge": 288,
+      "ms": 4866
+    },
+    {
+      "address": "Shop 3 Adyala Road Rawalpindi",
+      "status": 200,
+      "matchedAddress": "Adyala Road, Gulshanabad, Rawalpindi Cantonment, Rawalpindi 46606, Pakistan",
+      "type": "street",
+      "latitude": 33.5458765,
+      "longitude": 73.0539443,
+      "distanceKm": 9.762156000000001,
+      "deliveryCharge": 488,
+      "ms": 2481
+    },
+    {
+      "address": "Plot 20 Street 4 Soan Garden Islamabad",
+      "status": 200,
+      "matchedAddress": "Soan Garden, Zone V",
+      "type": "neighborhood",
+      "latitude": 33.562535,
+      "longitude": 73.1534991,
+      "distanceKm": 6.37451,
+      "deliveryCharge": 319,
+      "ms": 4929
+    },
+    {
+      "address": "House 4 Street 9 Sector A Bahria Enclave Islamabad",
+      "status": 200,
+      "matchedAddress": "Bahria Enclave, Jagiot",
+      "type": "neighborhood",
+      "latitude": 33.6877188,
+      "longitude": 73.2139883,
+      "distanceKm": 27.418357,
+      "deliveryCharge": 1371,
+      "ms": 3218
+    },
+    {
+      "address": "House 10 Street 5 Ghauri Town Phase 4 Islamabad",
+      "status": 200,
+      "matchedAddress": "Ghauri Town Phase 4-A, Zone IV",
+      "type": "phase",
+      "latitude": 33.6178496,
+      "longitude": 73.1344603,
+      "distanceKm": 11.804141,
+      "deliveryCharge": 590,
+      "ms": 5382
+    },
+    {
+      "address": "house 64 streat 5 gulraizz phaze 3 rawalpndi",
+      "status": 200,
+      "matchedAddress": "Gulrez Housing, Rawalpindi District",
+      "type": "neighborhood",
+      "latitude": 33.5618388,
+      "longitude": 73.105382,
+      "distanceKm": 0.8763479999999999,
+      "deliveryCharge": 50,
+      "ms": 3050
+    },
+    {
+      "address": "plasa 47 Jinna bouleverd secter E DHA2 Islmabad",
+      "status": 200,
+      "matchedAddress": "Jinnah Boulevard, DHA Phase II, Rawat 45730, Pakistan",
+      "type": "street",
+      "latitude": 33.5311245,
+      "longitude": 73.146962,
+      "distanceKm": 8.800510000000001,
+      "deliveryCharge": 440,
+      "ms": 2373
+    },
+    {
+      "address": "House 12 Rawalpindi city",
+      "status": 422,
+      "error": "We could not identify this street or neighbourhood. Include the housing scheme, sector or a nearby named road with your city, then calculate again.",
+      "ms": 2329
+    },
+    {
+      "address": "House 99 Street 999 Imaginary Sector ZZZ Rawalpindi",
+      "status": 422,
+      "error": "We could not identify this street or neighbourhood. Include the housing scheme, sector or a nearby named road with your city, then calculate again.",
+      "ms": 6103
+    }
+  ]
+}

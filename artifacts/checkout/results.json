@@ -1,0 +1,23 @@
+{
+  "quoteCalls": 13,
+  "trackCalls": 3,
+  "passed": [
+    "single address field",
+    "Enter resolves candidate; confirmation calculates quote",
+    "next disabled until quote",
+    "address edit clears fee",
+    "late response ignored",
+    "failed lookup blocks checkout",
+    "free pickup",
+    "receipt fee and complete address",
+    "tracking status",
+    "repeat lookup",
+    "cancelled order",
+    "wrong access token clears details",
+    "desktop and mobile no overflow",
+    "full app basket through order confirmation",
+    "phase fallback and Jinnah street quote preserve full address",
+    "Gulraiz approximate neighborhood blocks checkout until pin confirmed"
+  ],
+  "consoleErrors": []
+}

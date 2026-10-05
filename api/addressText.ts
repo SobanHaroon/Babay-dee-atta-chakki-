@@ -15,6 +15,11 @@ const roman:Record<string,string> = {i:'1',ii:'2',iii:'3',iv:'4',v:'5',vi:'6',vi
 
 export function correctAddressText(input:string):string {
   let text=input.normalize('NFKC').replace(/\s+/g,' ').trim();
+  const urdu: Record<string,string> = {'مکان':'House','گھر':'House','گلی':'Street','سٹریٹ':'Street','فلیٹ':'Flat','پلاٹ':'Plot','پلازہ':'Plaza','سیکٹر':'Sector','فیز':'Phase','راولپنڈی':'Rawalpindi','اسلام آباد':'Islamabad','گلریز':'Gulrez','بحریہ':'Bahria','ٹاؤن':'Town'};
+  for (const [word,replacement] of Object.entries(urdu)) text=text.replaceAll(word,replacement);
+  text=text.replace(/[۰-۹٠-٩]/g,digit=>String('۰۱۲۳۴۵۶۷۸۹'.includes(digit)?'۰۱۲۳۴۵۶۷۸۹'.indexOf(digit):'٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+    .replace(/\b(?:h\.?\s*no\.?|house\s*#)\s*(?=\d)/gi,'House ')
+    .replace(/\b(st|str|rd|sec|ph|apt)\.?\s*(?=\s|\d)/gi,(_,s)=>({st:'Street',str:'Street',rd:'Road',sec:'Sector',ph:'Phase',apt:'Apartment'}[s.toLowerCase()]+' '));
   text=text.replace(/[a-z]{4,}/gi,word=>{
     const lower=word.toLowerCase();
     if(vocabulary.includes(lower))return word;
@@ -25,7 +30,8 @@ export function correctAddressText(input:string):string {
   return aliases(text)
     .replace(/\bphase\s*[-:]?\s*([ivx]+)\b/gi,(_,r)=>'Phase '+(roman[r.toLowerCase()]||r))
     .replace(/\bdha\s*-?\s*(\d+)\b/gi,'DHA Phase $1')
-    .replace(/\b([a-i])\s*-?\s*(\d{1,2})(?:\s*\/\s*(\d{1,2}))?\b/gi,(_,letter,n,sub)=>letter.toUpperCase()+'-'+n+(sub?'/'+sub:''));
+    .replace(/\b([a-i])\s*-?\s*(\d{1,2})(?:\s*\/\s*(\d{1,2}))?\b/gi,(_,letter,n,sub)=>letter.toUpperCase()+'-'+n+(sub?'/'+sub:''))
+    .replace(/\s+/g,' ').trim();
 }
 export const normalizeAddressText=(s:string)=>aliases(s).toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim().replace(/\s+/g,' ');
 const premisePattern=/\b(?:house|home|flat|apartment|plot|building|plaza|shop|office)\s*(?:(?:no\.?|number|#)\s*)?[:#-]?\s*(?:[a-z]-?)?\d[\w/-]*\s*,?\s*/gi;
@@ -73,8 +79,8 @@ export function lookupQueries(address:string) {
   const corrected=correctAddressText(address),locality=localityQuery(corrected);
   const city=/\bislamabad\b/i.test(corrected)?'Islamabad':/\brawalpindi\b/i.test(corrected)?'Rawalpindi':'';
   const road=namedRoad(corrected);
-  // Local sector identifiers often prevent a road lookup; retain them for validation and the sector search.
-  const detailed=withoutHouse(corrected).replace(/\bsector\s+(?:[a-z]|\d{1,3})\b(?!\s*[-/\d])/gi,'').replace(/[,;]+/g,' ').replace(/\s+/g,' ').trim();
+  // Remove premise details only; preserve street, sector, phase and subdivision identifiers.
+  const detailed=withoutHouse(corrected).replace(/[,;]+/g,' ').replace(/\s+/g,' ').trim();
   const parent=sectorId(corrected)?.split('/')[0];
   const broad=parent&&parent!==locality?parent:locality;
   const requestedLetter=localSector(corrected);

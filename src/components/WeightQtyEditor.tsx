@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { cn, triggerHapticFeedback } from "../lib/utils";
+import { isWeightUnit } from "../lib/catalogPresentation";
 import { Minus, Plus } from "lucide-react";
 
 export interface WeightQtyEditorProps {
@@ -20,7 +21,8 @@ export function kgGramsToQty(kg: number, grams: number) {
   return kg + (grams / 1000);
 }
 
-export function displayFormattedQty(qty: number, _unit: string = "Kg") {
+export function displayFormattedQty(qty: number, unit: string = "Kg") {
+  if (!isWeightUnit(unit)) return `${qty} ${unit || "item"}${qty === 1 ? "" : "s"}`;
   if (qty < 1) {
     return `${Math.round(qty * 1000)}g`;
   }
@@ -39,8 +41,10 @@ export function WeightQtyEditor({
   className,
   variant = "full",
 }: WeightQtyEditorProps) {
-  const isWeight = true; // All products measured in Kg
-  const effectiveUnit = "Kg";
+  const isWeight = isWeightUnit(unit);
+  const effectiveUnit = isWeight ? "Kg" : unit || "Pack";
+  const minQty = isWeight ? 0.1 : 1;
+  const normalizeQty = (value: number) => Math.min(100, Math.max(minQty, isWeight ? Math.round(value * 10) / 10 : Math.round(value)));
   const [inputValue, setInputValue] = useState(quantity.toString());
   const [showPresets, setShowPresets] = useState(false);
 
@@ -52,19 +56,19 @@ export function WeightQtyEditor({
     setInputValue(val);
     const parsed = parseFloat(val);
     if (!isNaN(parsed) && parsed > 0) {
-      onChange(parsed);
+      onChange(normalizeQty(parsed));
     }
   };
 
   const handleBlur = () => {
     const parsed = parseFloat(inputValue);
     if (isNaN(parsed) || parsed <= 0) {
-      const fallback = 0.25;
+      const fallback = minQty;
       onChange(fallback);
       setInputValue(fallback.toString());
     } else {
       const rounded = Math.round(parsed * 1000) / 1000;
-      const finalVal = Math.max(0.05, rounded);
+      const finalVal = normalizeQty(rounded);
       onChange(finalVal);
       setInputValue(finalVal.toString());
     }
@@ -73,33 +77,19 @@ export function WeightQtyEditor({
   const adjustQty = (amount: number) => {
     triggerHapticFeedback(18);
     const current = quantity;
-    const minVal = 0.1;
+    const minVal = minQty;
     const newVal = Math.max(minVal, current + amount);
-    const rounded = Math.round(newVal * 100) / 100;
+    const rounded = normalizeQty(newVal);
     onChange(rounded);
     setInputValue(rounded.toString());
   };
 
-  const getStepSize = (dir: -1 | 1 = 1) => {
-    if (dir === -1) {
-      if (quantity <= 0.5) return 0.1;
-      if (quantity <= 1) return 0.25;
-      if (quantity <= 5) return 0.5;
-      return 1.0;
-    } else {
-      if (quantity < 1) return 0.25;
-      if (quantity < 5) return 0.5;
-      return 1.0;
-    }
-  };
+  const getStepSize = (_dir: -1 | 1 = 1) => isWeight ? 0.1 : 1;
 
-  const presets = [
-    { label: "250g", value: 0.25 },
-    { label: "500g", value: 0.5 },
-    { label: "1 Kg", value: 1.0 },
-    { label: "2 Kg", value: 2.0 },
-    { label: "5 Kg", value: 5.0 },
-  ];
+  const presets = isWeight ? [
+    { label: "100g", value: 0.1 }, { label: "500g", value: 0.5 },
+    { label: "1 Kg", value: 1 }, { label: "2 Kg", value: 2 }, { label: "5 Kg", value: 5 },
+  ] : [1, 2, 3, 5].map(value => ({label: `${value} ${effectiveUnit}${value > 1 ? "s" : ""}`, value}));
 
   const isPresetSelected = (val: number) => {
     return Math.abs(quantity - val) < 0.001;
@@ -131,7 +121,7 @@ export function WeightQtyEditor({
               setShowPresets(!showPresets);
             }}
             className="px-1.5 sm:px-2.5 min-w-[50px] sm:min-w-[62px] text-center hover:bg-slate-50 py-1 rounded-md transition-colors cursor-pointer group"
-            title="Click for quick weight options"
+            title="Choose quantity"
           >
             <span className="font-sans font-black text-xs text-slate-900 whitespace-nowrap block group-hover:text-amber-600">
               {displayFormattedQty(quantity, effectiveUnit)}
@@ -206,7 +196,8 @@ export function WeightQtyEditor({
         >
           <input
             type="text"
-            inputMode="decimal"
+            inputMode={isWeight ? "decimal" : "numeric"}
+            aria-label={`Quantity in ${effectiveUnit}`}
             value={inputValue}
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => handleInputChange(e.target.value)}

@@ -1,3 +1,4 @@
+import { productLabel } from "../lib/catalogPresentation";
 import { motion, AnimatePresence } from "motion/react";
 import { CartItem } from "../types";
 import { X, Trash2, ShoppingBag, Truck, CheckCircle2, Store, MapPin, Clock, ShieldCheck } from "lucide-react";
@@ -164,7 +165,7 @@ export function CartDrawer({
                               <div className="flex justify-between items-start gap-2">
                                 <div>
                                   <h4 className="text-xs font-black text-slate-900 line-clamp-1 truncate">
-                                    {item.name}
+                                    {productLabel(item)}
                                   </h4>
                                   <span className="text-[10px] text-slate-500 font-medium block">
                                     Rs. {item.price} / {item.unit || "Kg"}
@@ -180,6 +181,7 @@ export function CartDrawer({
                                 </button>
                               </div>
 
+                              {item.unavailable && <p role="alert" className="text-xs text-red-700 mt-2">Availability or quantity has changed. Update or remove this item.</p>}
                               <div className="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-slate-200/60">
                                 {/* Visual + and - Stepper Button Layout */}
                                 <WeightQtyEditor
@@ -282,6 +284,7 @@ export function CartDrawer({
                       triggerHapticFeedback(25);
                       onCheckout();
                     }}
+                    disabled={cartItems.some(item => item.unavailable)}
                     id="cart-drawer-checkout-btn"
                     className="w-full font-black px-4 py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer h-11 bg-amber-500 hover:bg-amber-600 active:scale-98 text-slate-950 uppercase tracking-wider text-xs"
                   >

@@ -25,7 +25,7 @@ export function DeliveryPinConfirm({point,onChange,disabled=false}:{point:Delive
     return()=>{observer.disconnect();m.remove();map.current=null;marker.current=null;};
   },[token]);
   useEffect(()=>{
-    if(point){if(gps){gpsEpoch.current++;setGps(false);}setLatitude(String(point.latitude));setLongitude(String(point.longitude));marker.current?.setLatLng([point.latitude,point.longitude]);}
+    if(point){if(gps){gpsEpoch.current++;setGps(false);}setLatitude(String(point.latitude));setLongitude(String(point.longitude));marker.current?.setLatLng([point.latitude,point.longitude]);if(map.current&&!map.current.getBounds().contains([point.latitude,point.longitude]))map.current.panTo([point.latitude,point.longitude]);}
   },[point?.latitude,point?.longitude]);
   useEffect(()=>{if(disabled){map.current?.dragging.disable();marker.current?.dragging?.disable();}else{map.current?.dragging.enable();marker.current?.dragging?.enable();}},[disabled]);
   const locate=()=>{

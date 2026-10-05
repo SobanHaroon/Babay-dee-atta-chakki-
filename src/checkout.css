@@ -37,3 +37,8 @@
 .delivery-pin-icon span{display:block;width:26px;height:26px;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#2553b6;box-shadow:0 2px 6px #152b5577}.pin-confirmation details{margin:12px 0}.pin-confirmation summary{font-size:12px;cursor:pointer}.pin-confirmation details .commerce-field-grid{margin-top:12px}.approximate-location>.commerce-primary{margin-top:12px;width:100%;white-space:normal}
 @media(max-width:480px){.approximate-location{padding:12px}.delivery-confirm-map{height:240px}.pin-confirmation .commerce-field-grid{grid-template-columns:1fr 1fr}.pin-confirmation input{min-width:0}}
 .tracking-summary>div{min-width:0;flex:1}.tracking-summary h2,.order-reference strong{overflow-wrap:anywhere;min-width:0}.tracking-summary .status-chip{flex:none;max-width:110px}.order-reference>div{min-width:0}
+
+/* Leaflet positions its tiles outside normal document flow; do not defer their paint. */
+.delivery-confirm-map img,
+.delivery-confirm-map svg,
+.delivery-confirm-map canvas { content-visibility: visible; }

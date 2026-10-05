@@ -37,7 +37,6 @@ export function createApplication(overrides: { repository?:CommerceRepository; c
     return res.status(status).json({success:false,error:known ? error.message : 'Service temporarily unavailable. Please try again.',code:known ? (error as any).code : 'UPSTREAM_UNAVAILABLE',requestId:res.locals.requestId});
   };
   const endpoint = (handler:(req:express.Request,res:express.Response)=>Promise<any>) => (req:express.Request,res:express.Response)=>{Promise.resolve(handler(req,res)).catch(error=>fail(res,error));};
-  const access = endpoint(async (req,res)=> { res.locals.order = await authorizeOrder(repository,req.params.id || req.body?.orderId,req.get('X-Order-Access-Token')); });
   const requireOrder:express.RequestHandler = (req,res,next)=>{authorizeOrder(repository,req.params.id || req.body?.orderId,req.get('X-Order-Access-Token')).then(order=>{res.locals.order=order;next();}).catch(error=>fail(res,error));};
   app.get('/api/health',(_req,res)=>res.json({status:'ok',businessName:'Babay Dee Atta Chakki'}));
   app.get('/api/categories',(_req,res)=>res.json(DEFAULT_CATEGORIES));

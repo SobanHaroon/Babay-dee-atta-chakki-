@@ -1,3 +1,4 @@
+import { checkoutContext } from './lib/checkoutSession';
 import { PolicyLinks } from "./components/PolicyLinks";
 import { CheckoutConfirmation } from "./components/CheckoutConfirmation";
 import { pakistanDateKey, upcomingDeliveryDays, formatRupees } from "./lib/commerce";
@@ -252,7 +253,7 @@ export default function App() {
     phone: typeof window !== "undefined" ? localStorage.getItem("customer_phone") || "" : "",
     email: typeof window !== "undefined" ? localStorage.getItem("customer_email") || "" : "",
     address: "",
-    checkoutContext: crypto.randomUUID(),
+    checkoutContext: checkoutContext(),
     addressVersion: 0,
     quoteExpiresAt: 0,
     deliveryQuotedAddress: "",
@@ -703,7 +704,7 @@ export default function App() {
         orderObj.orderAccessToken = data.orderAccessToken || orderObj.orderAccessToken;
         rememberOrderAccess(orderObj.id, orderObj.orderAccessToken || "");
         checkoutAttempt.current = null;
-        setCheckoutFormData(previous => ({...previous, checkoutContext: crypto.randomUUID(), addressVersion: 0, quoteExpiresAt: 0, deliveryQuoteToken: "", deliveryQuotedAddress: ""}));
+        setCheckoutFormData(previous => ({...previous, checkoutContext: checkoutContext(true), addressVersion: 0, quoteExpiresAt: 0, deliveryQuoteToken: "", deliveryQuotedAddress: ""}));
         setVerifiedDeliveryCharge(null); setIsDeliverable(false);
         if (data.emailStatus) {
           orderObj.emailStatus = data.emailStatus;

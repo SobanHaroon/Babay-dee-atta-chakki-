@@ -73,7 +73,7 @@ export async function checkout(body: any, key: unknown, dependencies: { reposito
     try { const claims=JSON.parse(Buffer.from(input.quoteToken.split('.')[0],'base64url').toString()); destination={latitude:claims.latitude,longitude:claims.longitude,deliveryCharge:claims.deliveryCharge}; }
     catch { throw new CommerceError('Calculate delivery charges before placing your order.',409,'QUOTE_REQUIRED'); }
   }
-  const { key:_key, quoteToken:_quoteToken,...semantic } = input;
+  const { key:_key, quoteToken:_quoteToken,addressVersion:_addressVersion,...semantic } = input;
   const requestHash = hash(JSON.stringify({...semantic,destination}));
   const existing = await dependencies.repository.findRetry(input.checkoutContext,input.key);
   const response = (record:StoredOrder,created:boolean) => { const token = orderAccessToken(record); return {success:true,orderId:record.id,order:{...record.document,orderAccessToken:token},orderAccessToken:token,created}; };

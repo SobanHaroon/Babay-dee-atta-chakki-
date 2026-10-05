@@ -27,6 +27,7 @@ test('trusted catalog rebuilds price, name, total and unpaid order state',async(
 });
 test('concurrent retries return one order/token and inventory decrement through atomic repository contract',async()=>{
  const r=repository(),input=body(),results=await Promise.all(Array.from({length:5},()=>checkout(input,input.checkoutContext,dependencies(r.repo))));
+ const renewed=await checkout({...input,addressVersion:input.addressVersion+1},input.checkoutContext,dependencies(r.repo));assert.equal(renewed.orderId,results[0].orderId);
  assert.equal(r.inserts,1);assert.equal(r.stock,8);assert.equal(new Set(results.map(r=>r.orderId)).size,1);assert.equal(new Set(results.map(r=>r.orderAccessToken)).size,1);
  await assert.rejects(checkout({...input,name:'Different Customer'},input.checkoutContext,dependencies(r.repo)),(e:any)=>e.code==='IDEMPOTENCY_CONFLICT');
 });

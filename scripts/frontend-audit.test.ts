@@ -59,3 +59,15 @@ test('tracking tokens are in URL fragments; escaped receipts retain access witho
   assert.match(html,/#access=opaque-synthetic-token/); assert.match(html,/Original house and street/);
   assert.doesNotMatch(html,/<script>test<\/script>/); assert.match(html,/&lt;script&gt;/);
 });
+
+test('checkout context survives reload and changes only after confirmed completion', async () => {
+  const {checkoutContext}=await import('../src/lib/checkoutSession');
+  const original=Object.getOwnPropertyDescriptor(globalThis,'sessionStorage');
+  const values=new Map<string,string>();
+  Object.defineProperty(globalThis,'sessionStorage',{configurable:true,value:{getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>values.set(key,value)}});
+  try {
+    const first=checkoutContext();assert.equal(checkoutContext(),first);
+    const next=checkoutContext(true);assert.notEqual(next,first);assert.equal(checkoutContext(),next);
+    values.set('babay_checkout_context','------------------------------------');assert.notEqual(checkoutContext(),'------------------------------------');
+  }finally{if(original)Object.defineProperty(globalThis,'sessionStorage',original);else Reflect.deleteProperty(globalThis,'sessionStorage');}
+});

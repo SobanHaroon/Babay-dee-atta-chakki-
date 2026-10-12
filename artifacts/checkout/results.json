@@ -2,6 +2,10 @@
   "quoteCalls": 13,
   "trackCalls": 3,
   "passed": [
+    "catalog failure is distinct from empty search",
+    "catalog retry without page reload",
+    "reconnect refresh synchronizes products",
+    "failed refresh preserves catalog",
     "single address field",
     "Enter resolves candidate; confirmation calculates quote",
     "next disabled until quote",

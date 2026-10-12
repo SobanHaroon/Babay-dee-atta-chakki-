@@ -14,3 +14,6 @@ agent/
 .env.*.local
 .env*
 !.env.example
+
+# Generated native ESM runtime verification output
+artifacts/catalog-runtime/

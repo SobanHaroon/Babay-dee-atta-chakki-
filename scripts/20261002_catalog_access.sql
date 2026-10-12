@@ -22,7 +22,7 @@ end $$;
 -- Catalog/reviews are publicly read through explicitly projected API responses.
 -- Browsers never require direct table permissions, even when signed into Supabase.
 do $$ declare item text; field text; begin
-  foreach item in array array['products','orders','delivery_settings','delivery_areas_charges'] loop
+  foreach item in array array['products','orders','delivery_settings','delivery_areas_charges','delivery_location'] loop
     if to_regclass('public.' || item) is not null then
       execute format('alter table public.%I enable row level security', item);
       execute format('revoke all on table public.%I from public, anon, authenticated', item);

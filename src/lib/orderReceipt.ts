@@ -1,4 +1,4 @@
-import { orderTrackingUrl } from "./orderAccess";
+import { orderTrackingUrl } from "./orderAccess.js";
 function escapeReceiptValues(value: any): any {
   if (typeof value === "string") return value.replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]!));
   if (Array.isArray(value)) return value.map(escapeReceiptValues);

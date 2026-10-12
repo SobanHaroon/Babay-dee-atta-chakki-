@@ -68,7 +68,7 @@ declare
   v_quantity numeric; v_price numeric; v_subtotal numeric := 0; v_fee numeric;
   v_unit text; v_name text; v_seen text[] := '{}';
 begin
-  if jsonb_typeof(p_order->'document'->'items') <> 'array' or jsonb_array_length(p_order->'document'->'items') not between 1 and 50 then raise exception 'INVALID_CART'; end if;
+  if jsonb_typeof(p_order->'document'->'items') is distinct from 'array' or jsonb_array_length(p_order->'document'->'items') not between 1 and 50 then raise exception 'INVALID_CART'; end if;
   perform pg_advisory_xact_lock(hashtextextended(p_order->>'checkout_context',0));
   select * into v_existing from public.secure_orders where checkout_context=(p_order->>'checkout_context')::uuid;
   if found then
@@ -81,12 +81,12 @@ begin
     select to_jsonb(p) into strict v_product from public.products p where p.id::text=v_item->>'id' for update;
     v_unit := v_product->>'sale_unit';
     v_quantity := (v_item->>'quantity')::numeric;
-    if v_unit is null or v_unit not in ('kg','pack') or v_product->>'stock_quantity' is null or v_quantity <= 0 or v_quantity > 100
+    if v_unit is null or v_unit not in ('kg','pack') or v_product->>'stock_quantity' is null or v_quantity is null or v_quantity::text in ('NaN','Infinity','-Infinity') or v_quantity <= 0 or v_quantity > 100
       or (v_unit='pack' and (v_quantity<>trunc(v_quantity) or coalesce((v_product->>'pack_weight_kg')::numeric,0)<=0))
       or (v_unit='kg' and v_quantity*10<>trunc(v_quantity*10))
       or (v_product->>'stock_quantity')::numeric<v_quantity then raise exception 'STOCK_CHANGED'; end if;
     if lower(coalesce(v_product->>'out_of_stock','false'))='true' or lower(coalesce(v_product->>'status','')) in ('out of stock','out-of-stock','sold out') then raise exception 'STOCK_CHANGED'; end if;
-    if replace(v_product->>'price',',','') !~ '^[0-9]+(\.[0-9]{1,2})?$' then raise exception 'PRICE_CHANGED'; end if;
+    if v_product->>'price' is null or v_item->>'price' is null or replace(v_product->>'price',',','') !~ '^[0-9]+(\.[0-9]{1,2})?$' then raise exception 'PRICE_CHANGED'; end if;
     v_price := replace(v_product->>'price',',','')::numeric;
     if v_price<=0 or v_price<>(v_item->>'price')::numeric then raise exception 'PRICE_CHANGED'; end if;
     v_name := coalesce(v_product->>'product name',v_product->>'name','');
@@ -97,7 +97,7 @@ begin
   end loop;
   v_subtotal:=round(v_subtotal,2);
   v_fee := (p_order->'document'->>'deliveryCharges')::numeric;
-  if v_fee is null or v_fee<0 or v_fee>100000 or v_fee<>round(v_fee,2) then raise exception 'INVALID_FEE'; end if;
+  if v_fee is null or v_fee::text in ('NaN','Infinity','-Infinity') or v_fee<0 or v_fee>100000 or v_fee<>round(v_fee,2) then raise exception 'INVALID_FEE'; end if;
   if p_order->'document'->>'fulfillmentType'='pickup' then v_fee:=0; end if;
   v_document := p_order->'document' || jsonb_build_object('items',v_items,'subtotal',v_subtotal,'deliveryCharges',v_fee,'discount',0,'total',v_subtotal+v_fee,'status','Order Placed','paymentStatus','unpaid');
   insert into public.secure_orders(id,document,checkout_context,idempotency_key,request_hash,order_access_hash,access_expires_at)

@@ -1,0 +1,8 @@
+{
+  "productCount": 161,
+  "catalogCount": 161,
+  "source": "Real localhost API and Supabase catalog; no product fixtures",
+  "desktop": true,
+  "mobile": true,
+  "mutatingRequestsBlocked": true
+}

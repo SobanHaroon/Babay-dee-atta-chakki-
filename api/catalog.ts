@@ -1,6 +1,6 @@
 /** The only conversion from database catalog rows to the public storefront model.
  * `quantity` is legacy inventory, never a sale unit or a pack weight.
- * New nullable fields require an owner-confirmed backfill before a row can sell.
+ * Owner confirmed 2026-10-11: legacy prices are per kg; quantity / 10 is kg stock.
  */
 export const PRODUCT_PUBLIC_COLUMNS = 'id,"product name",price,quantity,place,"Product Category","Product Images",sale_unit,stock_quantity,pack_weight_kg,variant_label';
 
@@ -56,11 +56,14 @@ export function normalizeCatalogProduct(p: Row) {
   const name = firstText(p['product name'], p.name);
   const price = catalogNumber(p.price);
   const category = categoryFor(p, id);
-  // Accept only explicitly recorded sale units, never numbers from quantity.
-  const rawUnit = firstText(p.sale_unit, p.saleUnit, p.unit).toLowerCase();
+  // Explicit metadata takes precedence; legacy kg conversion is owner-confirmed.
+  const rawUnit = (firstText(p.sale_unit, p.saleUnit, p.unit) || 'kg').toLowerCase();
   const saleUnit: 'kg' | 'pack' | null = /^(kg|kgs|kilogram|kilograms)$/.test(rawUnit) ? 'kg' : /^(pack|packs|packet|packets)$/.test(rawUnit) ? 'pack' : null;
-  const stockQuantity = catalogNumber(p.stock_quantity ?? p.stockQuantity);
   const legacyStockQuantity = catalogNumber(p.quantity);
+  const explicitStock = p.stock_quantity ?? p.stockQuantity;
+  const stockQuantity = explicitStock == null
+    ? (saleUnit === 'kg' && legacyStockQuantity !== null ? legacyStockQuantity / 10 : null)
+    : catalogNumber(explicitStock);
   const packWeightKg = catalogNumber(p.pack_weight_kg ?? p.packWeightKg);
   const catalogIssues: string[] = [];
   if (!id || !name) catalogIssues.push('missing_identity');

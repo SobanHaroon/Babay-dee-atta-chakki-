@@ -1,5 +1,9 @@
 import type { Product, CartItem } from '../types';
 
+export function hasUnconfirmedSaleDetails(product: Product): boolean {
+  return !!product.catalogIssues?.some(issue => issue !== 'variant_description_needed');
+}
+
 export function isPurchasable(product: Product): boolean {
   return !product.outOfStock && product.purchasable !== false && Number.isFinite(product.price) && product.price > 0;
 }

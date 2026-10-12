@@ -15,7 +15,7 @@ const vite=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','127
 const chrome=spawn('C:/Program Files/Google/Chrome/Application/chrome.exe',['--headless=new','--remote-debugging-port=9340','--user-data-dir='+profile,'--no-first-run','--no-default-browser-check','--window-size=1280,1100','about:blank'],{windowsHide:true,stdio:'ignore'});
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(fn,label,timeout=90000){const end=Date.now()+timeout;while(Date.now()<end){try{const r=await fn();if(r)return r;}catch{}await pause(150);}throw Error('Timed out: '+label);}
-let socket;const errors=[];let mode='ok',quoteCalls=0,trackCalls=0,appOrder=null,submittedBody=null;
+let socket;const errors=[];let catalogMode='ok',catalogName='Chakki Atta';let mode='ok',quoteCalls=0,trackCalls=0,appOrder=null,submittedBody=null;
 try{
  await until(async()=>(await fetch('http://127.0.0.1:5180/artifacts/checkout-check.html')).ok,'Vite');
  const tabs=await until(async()=>(await fetch('http://127.0.0.1:9340/json')).json(),'Chrome');socket=new WebSocket(tabs.find(t=>t.type==='page').webSocketDebuggerUrl);await new Promise(r=>socket.addEventListener('open',r,{once:true}));
@@ -32,7 +32,7 @@ try{
   }
   else if(request.url.includes('/api/order/')){trackCalls++;body=await evaluate('window.sampleOrder');if(mode==='cancelled')body.status='Cancelled';if(mode==='denied'){status=404;body={error:'Not found'};}}
   else if(request.url.includes('/api/checkout')){submittedBody=JSON.parse(request.postData);const sub=submittedBody.cartItems.reduce((sum,item)=>sum+170*item.quantity,0);appOrder={...appOrder,customer:{...submittedBody},items:submittedBody.cartItems.map(item=>({...item,name:'Chakki Atta',price:170,unit:'Kg'})),subtotal:sub,total:sub+263,deliveryDate:submittedBody.deliveryDate,deliverySlot:submittedBody.deliverySlot};body={success:true,order:appOrder,orderId:appOrder.id};}
-  else if(request.url.includes('/api/products'))body=[{id:'1',name:'Chakki Atta',price:170,unit:'Kg',saleUnit:'kg',stockQuantity:100,quantityStep:.1,purchasable:true,category:'flour',desc:'Fresh flour',img:'/images/flour.webp'}];
+  else if(request.url.includes('/api/products')){if(catalogMode==='failure'){status=503;body={error:'Synthetic catalog failure'};}else body=[{id:'1',name:catalogName,price:170,unit:'Kg',saleUnit:'kg',stockQuantity:100,quantityStep:.1,purchasable:true,category:'flour',desc:'Fresh flour',img:'/images/flour.webp'}];}
   else body=[];
   try{await send('Fetch.fulfillRequest',{requestId,responseCode:status,responseHeaders:[{name:'Content-Type',value:'application/json'}],body:Buffer.from(JSON.stringify(body)).toString('base64')});}catch{}
  }});
@@ -61,8 +61,21 @@ try{
  await shot('tracking-desktop',1280);await shot('tracking-mobile',390);const before=trackCalls;mode='cancelled';await click('Track order');await until(()=>trackCalls>before&&evaluate('Boolean(document.querySelector(".status-chip.cancelled"))'),'repeat lookup');assert.equal(await evaluate('Boolean(document.querySelector(".order-timeline"))'),false);
  mode='denied';await click('Track order');await until(()=>evaluate('document.body.innerText.includes("No order found")'),'wrong access token');assert.equal(await evaluate('Boolean(document.querySelector(".receipt-panel"))'),false);
  appOrder=await evaluate('window.sampleOrder');mode='ok';
+ catalogMode='failure';
  await send('Page.navigate',{url:'http://127.0.0.1:5180/?tab=shop'});
+ await until(()=>evaluate('document.body.innerText.includes("The catalog could not be loaded")'),'catalog failure state');
+ assert.equal(await evaluate('document.body.innerText.includes("No merchandise matches")'),false);
+ await shot('catalog-error-mobile',390);catalogMode='ok';await click('Retry catalog');
  await until(()=>evaluate('Boolean(document.querySelector("#add-to-cart-btn-1"))'),'full app catalog');
+ catalogName='Refreshed catalog fixture';await evaluate('window.dispatchEvent(new Event("online"))');
+ await until(()=>evaluate('document.querySelector("#add-to-cart-btn-1")?.getAttribute("aria-label").includes("Refreshed catalog fixture")'),'catalog synchronizes on reconnect');
+ catalogMode='failure';await evaluate('window.dispatchEvent(new Event("online"))');
+ await until(()=>evaluate('document.body.innerText.includes("could not be refreshed")'),'refresh failure message');
+ assert.equal(await evaluate('Boolean(document.querySelector("#add-to-cart-btn-1"))'),true,'refresh failure preserves current products');
+ catalogMode='ok';catalogName='Chakki Atta';await click('Retry');
+ await until(()=>evaluate('Boolean(document.querySelector("#add-to-cart-btn-1")) && !document.body.innerText.includes("Refreshed catalog fixture")'),'catalog retry recovery');
+ await shot('catalog-loaded-mobile',390);
+
  await evaluate('document.querySelector("#add-to-cart-btn-1").click()');
  await pause(300);if(!await evaluate('Boolean(document.querySelector("#cart-drawer-checkout-btn"))'))await evaluate('document.querySelector("#header-basket-btn").click()');
  await until(()=>evaluate('Boolean(document.querySelector("#cart-drawer-checkout-btn"))'),'full app basket');
@@ -80,5 +93,5 @@ try{
  await shot('confirm-order-mobile',390);await click('Confirm & place order');await until(()=>evaluate('Boolean(document.querySelector("#order-received-title"))'),'full app order received');
  assert.equal(submittedBody.deliveryQuoteToken,'signed-fixture');assert.equal(submittedBody.address,'House 14, Main Gulraiz Road, Rawalpindi');assert.equal(submittedBody.deliverySlot,'Morning');
  console.log('Full app: basket, quote, review, submission payload and confirmation passed.');
- assert.equal(errors.length,0,JSON.stringify(errors));await writeFile(path.join(output,'results.json'),JSON.stringify({quoteCalls,trackCalls,passed:['single address field','Enter resolves candidate; confirmation calculates quote','next disabled until quote','address edit clears fee','late response ignored','failed lookup blocks checkout','free pickup','receipt fee and complete address','tracking status','repeat lookup','cancelled order','wrong access token clears details','desktop and mobile no overflow','full app basket through order confirmation','phase fallback and Jinnah street quote preserve full address','Gulraiz approximate neighborhood blocks checkout until pin confirmed'],consoleErrors:errors},null,2));console.log('Checkout, receipt and tracking browser checks passed.');
+ assert.equal(errors.length,0,JSON.stringify(errors));await writeFile(path.join(output,'results.json'),JSON.stringify({quoteCalls,trackCalls,passed:['catalog failure is distinct from empty search','catalog retry without page reload','reconnect refresh synchronizes products','failed refresh preserves catalog','single address field','Enter resolves candidate; confirmation calculates quote','next disabled until quote','address edit clears fee','late response ignored','failed lookup blocks checkout','free pickup','receipt fee and complete address','tracking status','repeat lookup','cancelled order','wrong access token clears details','desktop and mobile no overflow','full app basket through order confirmation','phase fallback and Jinnah street quote preserve full address','Gulraiz approximate neighborhood blocks checkout until pin confirmed'],consoleErrors:errors},null,2));console.log('Checkout, receipt and tracking browser checks passed.');
 }finally{socket?.close();chrome.kill();vite.kill();await unlink(harness).catch(()=>{});}

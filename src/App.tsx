@@ -163,6 +163,7 @@ export default function App() {
   // Loading indicators
   const [isLoading, setIsLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
+  const reloadCatalog = useRef<() => void>(() => {});
   const checkoutAttempt = useRef<{fingerprint: string; key: string} | null>(null);
 
   // Filter states
@@ -294,6 +295,7 @@ export default function App() {
     const loadCatalog = async (initial = false) => {
       if (fetching || (!initial && document.hidden)) return;
       fetching = true;
+      if(initial)setIsLoading(true);
       const fetchJson = async (url: string) => {
         const response = await fetch(url, {signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12000)])});
         if (!response.ok) throw new Error("The catalogue is temporarily unavailable. Please retry shortly.");
@@ -313,9 +315,13 @@ export default function App() {
           }
         }
       } catch (failure: any) {
-        if (!controller.signal.aborted) setCatalogError(failure.message || "Unable to load the catalogue. Please retry.");
+        if (!controller.signal.aborted) setCatalogError("The catalogue could not be refreshed. Check your connection and try again.");
       } finally { fetching = false; if (!controller.signal.aborted) setIsLoading(false); }
     };
+    reloadCatalog.current=()=>{void loadCatalog(true);};
+    const onCatalogResume=()=>{if(!document.hidden)void loadCatalog();};
+    document.addEventListener("visibilitychange",onCatalogResume);
+    window.addEventListener("online",onCatalogResume);
     void loadCatalog(true);
     const pollInterval = setInterval(() => { void loadCatalog(); }, 60000);
 
@@ -370,6 +376,9 @@ export default function App() {
       if (window.visualViewport) {
         window.visualViewport.removeEventListener("resize", handleViewportChange);
       }
+      document.removeEventListener("visibilitychange",onCatalogResume);
+      window.removeEventListener("online",onCatalogResume);
+      reloadCatalog.current=()=>{};
       clearInterval(pollInterval);
       controller.abort();
     };
@@ -1113,6 +1122,12 @@ export default function App() {
             {/* Products grid render with SkeletonLoaderScreen during Supabase fetch */}
             {isLoading ? (
               <SkeletonLoaderScreen />
+            ) : catalogError && products.length === 0 ? (
+              <div role="alert" className="p-10 text-center bg-white border border-slate-100 rounded-2xl">
+                <h2 className="font-bold text-lg text-slate-800">The catalog could not be loaded</h2>
+                <p className="mt-2 text-sm text-slate-500">{catalogError}</p>
+                <button type="button" onClick={()=>reloadCatalog.current()} className="mt-4 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white">Retry catalog</button>
+              </div>
             ) : filteredProducts.length === 0 ? (
               <div className="p-16 text-center text-slate-400 bg-white border border-slate-100 rounded-2xl">
                 <p className="font-bold text-sm">No merchandise matches your search details.</p>
@@ -1456,7 +1471,7 @@ export default function App() {
         </React.Suspense>
       </main>
 
-      {catalogError && <p role="alert" className="max-w-7xl mx-auto my-4 px-4 text-red-700">{catalogError} <button type="button" className="underline" onClick={() => location.reload()}>Retry</button></p>}
+      {catalogError && <p role="alert" className="max-w-7xl mx-auto my-4 px-4 text-red-700">{catalogError} <button type="button" className="underline" onClick={() => reloadCatalog.current()}>Retry</button></p>}
       {/* 4. Slide-Out Basket drawer widget mapping */}
       <CartDrawer
         isOpen={isCartOpen}

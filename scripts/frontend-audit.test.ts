@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {availableBundle, cartFromProduct, isPurchasable, productLabel, quantityIsAllowed} from '../src/lib/catalogPresentation';
+import {availableBundle, hasUnconfirmedSaleDetails, cartFromProduct, isPurchasable, productLabel, quantityIsAllowed} from '../src/lib/catalogPresentation';
 import {WeightQtyEditor, displayFormattedQty} from '../src/components/WeightQtyEditor';
 import {ReviewsSection} from '../src/components/ReviewsSection';
 import {generateOrderReceiptHtml} from '../src/lib/orderReceipt';
@@ -70,4 +70,9 @@ test('checkout context survives reload and changes only after confirmed completi
     const next=checkoutContext(true);assert.notEqual(next,first);assert.equal(checkoutContext(),next);
     values.set('babay_checkout_context','------------------------------------');assert.notEqual(checkoutContext(),'------------------------------------');
   }finally{if(original)Object.defineProperty(globalThis,'sessionStorage',original);else Reflect.deleteProperty(globalThis,'sessionStorage');}
+});
+
+test('variant descriptions do not mislabel confirmed out-of-stock products',()=>{
+ assert.equal(hasUnconfirmedSaleDetails(product('1','Rice',{outOfStock:true,catalogIssues:['variant_description_needed']})),false);
+ assert.equal(hasUnconfirmedSaleDetails(product('2','Pack',{catalogIssues:['unconfirmed_pack_weight']})),true);
 });

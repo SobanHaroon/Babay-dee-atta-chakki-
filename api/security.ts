@@ -1,5 +1,5 @@
 ﻿import type { Express, Request } from 'express';
-import { createHmac, randomUUID } from 'node:crypto';
+import { createHmac, randomUUID, randomBytes } from 'node:crypto';
 import { isIP } from 'node:net';
 
 export interface RateStore { consume(key: string, limit: number, windowSeconds: number): Promise<{ allowed: boolean; retryAfter: number }> }
@@ -35,6 +35,8 @@ export function requestIp(req: Request) {
 export function installSecurity(app: Express, options: { rateStore?: RateStore; production?: boolean } = {}) {
   const production = options.production ?? process.env.NODE_ENV === 'production';
   const store = options.rateStore ?? (production ? databaseRateStore(null) : memoryRateStore());
+  // Catalog reads do not depend on commerce migrations or signing secrets.
+  const catalogRateStore=memoryRateStore(),catalogRateSecret=randomBytes(32).toString('hex');
   app.disable('x-powered-by');
   const hops = Number(process.env.TRUST_PROXY_HOPS);
   if (Number.isInteger(hops) && hops > 0 && hops < 5) app.set('trust proxy', hops);
@@ -62,10 +64,11 @@ export function installSecurity(app: Express, options: { rateStore?: RateStore; 
     const bucket = req.path.startsWith('/api/delivery/') && req.method === 'POST' ? 'quote' : req.path === '/api/checkout' ? 'checkout' : req.path.includes('send-receipt') ? 'receipt' : req.path.includes('reviews') || req.path.includes('feedback') ? (req.method === 'POST' ? 'review' : 'public') : req.path.startsWith('/api/order/') ? 'tracking' : 'public';
     const limit = ({ quote: 12, checkout: 8, receipt: 3, review: 3, tracking: 40, public: 120 })[bucket];
     try {
-      const secret = process.env.RATE_LIMIT_SECRET || process.env.ORDER_ACCESS_SECRET;
+      const catalogRead=['GET','HEAD'].includes(req.method)&&(/^\/api\/(?:health|categories|products|featured-products|popular-products)$/.test(req.path)||/^\/api\/product\/[^/]+$/.test(req.path));
+      const secret = catalogRead ? catalogRateSecret : process.env.RATE_LIMIT_SECRET || process.env.ORDER_ACCESS_SECRET;
       if (production && (!secret || secret.length < 32)) throw new Error('Rate key unavailable');
       const key = createHmac('sha256', secret || 'local-development-only').update(`${bucket}:${requestIp(req)}`).digest('hex');
-      const result = await store.consume(key, limit, 60);
+      const result = await (catalogRead?catalogRateStore:store).consume(key, limit, 60);
       if (!result.allowed) { res.setHeader('Retry-After', String(result.retryAfter)); return res.status(429).json({ error: 'Too many requests. Please wait and try again.', requestId }); }
       next();
     } catch { console.warn(JSON.stringify({ event: 'rate_limit_unavailable', requestId, bucket })); res.status(503).json({ error: 'Service temporarily unavailable. Please try again shortly.', requestId }); }

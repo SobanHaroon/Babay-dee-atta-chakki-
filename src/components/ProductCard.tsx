@@ -1,4 +1,4 @@
-import { isPurchasable, productLabel } from "../lib/catalogPresentation";
+import { isPurchasable, productLabel, hasUnconfirmedSaleDetails } from "../lib/catalogPresentation";
 import React, { MouseEvent, useState, useRef, useEffect } from "react";
 import { Product } from "../types";
 import { triggerFlourParticleBurst } from "./GsapAnimations";
@@ -221,7 +221,7 @@ function ProductExpandedHoverCard({
               disabled
               className="w-full py-2.5 bg-red-950/40 border border-red-500/20 text-red-400 text-xs font-black uppercase rounded-xl tracking-wider flex items-center justify-center gap-1.5 cursor-not-allowed"
             >
-              {product.catalogIssues?.length ? "DETAILS NEED CONFIRMATION" : "OUT OF STOCK"}
+              {hasUnconfirmedSaleDetails(product) ? "DETAILS NEED CONFIRMATION" : "OUT OF STOCK"}
             </button>
           ) : (
             <button
@@ -385,7 +385,7 @@ export function ProductCard({
           <div className="flex items-center justify-between gap-1.5 mb-1.5 min-h-[16px]">
             {!isPurchasable(product) ? (
               <span className="bg-red-50 text-red-600 border border-red-200 text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded">
-                {product.catalogIssues?.length ? "Sale details unconfirmed" : "Out of stock"}
+                {hasUnconfirmedSaleDetails(product) ? "Sale details unconfirmed" : "Out of stock"}
               </span>
             ) : product.badge ? (
               <span className="bg-amber-100 text-amber-900 border border-amber-300/80 text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded">
@@ -462,7 +462,7 @@ export function ProductCard({
             aria-label={`${productLabel(product)} is out of stock`}
             className="w-full mt-3 py-3 min-h-[48px] text-slate-400 bg-slate-100 text-xs font-bold uppercase rounded-xl tracking-wider flex items-center justify-center cursor-not-allowed border border-slate-200"
           >
-            {product.catalogIssues?.length ? "DETAILS NEED CONFIRMATION" : "OUT OF STOCK"}
+            {hasUnconfirmedSaleDetails(product) ? "DETAILS NEED CONFIRMATION" : "OUT OF STOCK"}
           </button>
         ) : (
           <button

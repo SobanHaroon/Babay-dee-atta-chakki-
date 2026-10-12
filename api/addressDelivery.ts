@@ -1,12 +1,13 @@
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { validCoordinates } from '../src/lib/mapbox.js';
-import { geoapifySearch, geoapifyRoadDistance, DeliveryQuoteError, type ProviderPlace, type LookupStage } from './geoapify.js';
+import { geoapifySearch, geoapifyRoadDistance, geoapifyServiceArea, DeliveryQuoteError, type ProviderPlace, type LookupStage } from './geoapify.js';
 import { correctAddressText, normalizeAddressText as normalize, sectorId as sector, phaseId as phase, phasesAgree, localSector, houseNumber, streetNumber, significantWords, wordsAgree, namedRoad, localityQuery, lookupQueries, neighborhoodQuery, isSectorName, withoutHouse } from './addressText.js';
 export { withoutHouse, localityQuery } from './addressText.js';
 export { DeliveryQuoteError } from './geoapify.js';
 export interface DeliverySettings {
   storeLatitude:number;storeLongitude:number;pricePerKm:number;maxDeliveryDistanceKm:number;
   minDeliveryFee?:number;feeRounding?:'nearest-rupee';pricingVersion?:string;
+  serviceAreas?:string[];
   serviceRegion?:{south:number;west:number;north:number;east:number};
   storeName?:string;storeAddress?:string;
 }
@@ -146,12 +147,12 @@ function quoteSecret(){
 }
 const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
 const signature=(payload:string)=>createHmac('sha256',quoteSecret()).update(payload).digest();
-const settingsKey=(s:DeliverySettings)=>hash(JSON.stringify([s.storeLatitude,s.storeLongitude,s.pricePerKm,s.maxDeliveryDistanceKm,s.minDeliveryFee??50,s.feeRounding??'nearest-rupee',s.pricingVersion??'existing-50km-v1',s.serviceRegion??null]));
+const settingsKey=(s:DeliverySettings)=>hash(JSON.stringify([s.storeLatitude,s.storeLongitude,s.pricePerKm,s.maxDeliveryDistanceKm,s.minDeliveryFee??50,s.feeRounding??'nearest-rupee',s.pricingVersion??'existing-50km-v1',s.serviceRegion??null,s.serviceAreas??null]));
 export function deliveryFee(distanceKm:number,s:DeliverySettings){return Math.max(s.minDeliveryFee??50,Math.round(distanceKm*s.pricePerKm));}
 export function destinationInRegion(latitude:number,longitude:number,s:DeliverySettings){
   if(!validCoordinates(latitude,longitude))return false;
   const b=s.serviceRegion;
-  if(!b)return process.env.NODE_ENV!=='production';
+  if(!b)return !!s.serviceAreas?.length || process.env.NODE_ENV!=='production';
   return latitude>=b.south&&latitude<=b.north&&longitude>=b.west&&longitude<=b.east;
 }
 function assertDestination(latitude:number,longitude:number,s:DeliverySettings){
@@ -159,7 +160,7 @@ function assertDestination(latitude:number,longitude:number,s:DeliverySettings){
 }
 export function signDeliveryQuote(quote:Record<string,unknown>,address:string,settings:DeliverySettings,now=Date.now(),context:QuoteContext={}){
   if(process.env.NODE_ENV==='production'&&!validQuoteContext(context))throw new DeliveryQuoteError('Please start a new checkout and calculate delivery again.',400,'INVALID_CONTEXT');
-  const payload=Buffer.from(JSON.stringify({v:2,latitude:quote.latitude,longitude:quote.longitude,distanceKm:quote.distanceKm,deliveryCharge:quote.deliveryCharge,type:quote.type,matchedAddress:quote.matchedAddress,city:quote.city,area:quote.area,geocodedLatitude:quote.geocodedLatitude,geocodedLongitude:quote.geocodedLongitude,sourcePrecision:quote.sourcePrecision,
+  const payload=Buffer.from(JSON.stringify({v:2,latitude:quote.latitude,longitude:quote.longitude,distanceKm:quote.distanceKm,deliveryCharge:quote.deliveryCharge,type:quote.type,matchedAddress:quote.matchedAddress,city:quote.city,area:quote.area,geocodedLatitude:quote.geocodedLatitude,geocodedLongitude:quote.geocodedLongitude,sourcePrecision:quote.sourcePrecision,serviceArea:quote.serviceArea,
     addressHash:hash(address.trim()),settings:settingsKey(settings),checkoutContext:context.checkoutContext,addressVersion:context.addressVersion,issuedAt:now,expires:now+10*60*1000})).toString('base64url');
   return payload+'.'+signature(payload).toString('base64url');
 }
@@ -173,6 +174,7 @@ export function verifyDeliveryQuote(token:unknown,address:string,settings:Delive
   let q:any;try{q=JSON.parse(Buffer.from(payload,'base64url').toString());}catch{throw invalid();}
   if(q.v!==2||q.addressHash!==hash(address.trim())||q.settings!==settingsKey(settings)||!Number.isFinite(q.issuedAt)||q.issuedAt>now||!Number.isFinite(q.expires)||q.expires<=now||q.expires-q.issuedAt>600000||
     !destinationInRegion(q.latitude,q.longitude,settings)||!Number.isFinite(q.distanceKm)||q.distanceKm<0||q.distanceKm>settings.maxDeliveryDistanceKm||q.deliveryCharge!==deliveryFee(q.distanceKm,settings))throw invalid();
+  if(settings.serviceAreas?.length&&!settings.serviceAreas.includes(q.serviceArea))throw invalid();
   if(q.checkoutContext!==undefined&&(!validQuoteContext(options)||q.checkoutContext!==options.checkoutContext||q.addressVersion!==options.addressVersion))throw invalid();
   if(process.env.NODE_ENV==='production'&&!validQuoteContext(options))throw invalid();
   return q;
@@ -207,10 +209,11 @@ export async function createDeliveryQuote(address:unknown,settings:DeliverySetti
       return {success:true,requiresPinConfirmation:true as const,requestId,candidate:optionsWithTokens[0],candidates:optionsWithTokens,checkoutContext:options.checkoutContext,addressVersion:options.addressVersion};
     }
   }
+  const serviceArea=settings.serviceAreas?.length?await geoapifyServiceArea(match,settings.serviceAreas,requestId):undefined;
   const route=await geoapifyRoadDistance(settings,match,requestId);
   if(route.distanceKm>settings.maxDeliveryDistanceKm)throw new DeliveryQuoteError(`This location is ${route.distanceKm.toFixed(2)} km away by road. We deliver within ${settings.maxDeliveryDistanceKm} km. You can choose store pickup.`,422,'DISTANCE_LIMIT');
   const now=options.now??Date.now();
-  const quote={success:true,deliverable:true,requiresPinConfirmation:false as const,...match,...route,deliveryCharge:deliveryFee(route.distanceKm,settings),pricePerKm:settings.pricePerKm,
+  const quote={success:true,deliverable:true,serviceArea,requiresPinConfirmation:false as const,...match,...route,deliveryCharge:deliveryFee(route.distanceKm,settings),pricePerKm:settings.pricePerKm,
     expiresAt:now+600000,checkoutContext:options.checkoutContext,addressVersion:options.addressVersion,requestId};
   return {...quote,quoteToken:signDeliveryQuote(quote,address,settings,now,options)};
 }

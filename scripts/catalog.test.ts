@@ -9,10 +9,10 @@ test('stock counts never become sale units or pack weights', () => {
     assert.equal(row.unit, 'Kg'); assert.equal(row.stockQuantity, Number(quantity)); assert.equal(row.packWeightKg, null);
     assert.equal(row.outOfStock, Number(quantity) === 0);
   }
-  const ambiguous = normalizeCatalogProduct({...base, sale_unit: undefined});
+  const ambiguous = normalizeCatalogProduct({...base, sale_unit: 'unknown'});
   assert.equal(ambiguous.saleUnit, null); assert.equal(ambiguous.purchasable, false);
   assert.ok(ambiguous.catalogIssues.includes('unconfirmed_sale_unit'));
-  assert.equal(normalizeCatalogProduct({...base,stock_quantity:undefined}).purchasable,false);
+  assert.equal(normalizeCatalogProduct({...base,stock_quantity:undefined}).stockQuantity,20);
 });
 test('pack units and pack weight require explicit source values', () => {
   const pack = normalizeCatalogProduct({...base, sale_unit:'pack', stock_quantity:10, pack_weight_kg:0.5});
@@ -39,4 +39,14 @@ test('public catalog is projected and image protocols constrained', () => {
 });
 test('duplicate identities never turn into fabricated orderable product IDs', () => {
   assert.deepEqual(normalizeCatalog([base,base]).map(row=>row.id),['4']);
+});
+
+test('owner-confirmed legacy stock scale supports available and zero-stock kg products', () => {
+  for (const [quantity, stock] of [['100000',10000],['3000',300],['0',0],['00000',0]] as const) {
+    const row=normalizeCatalogProduct({...base,sale_unit:null,stock_quantity:null,quantity});
+    assert.equal(row.unit,'Kg');assert.equal(row.stockQuantity,stock);assert.equal(row.price,180);
+    assert.equal(row.purchasable,stock>0);assert.deepEqual(row.catalogIssues,[]);
+  }
+  assert.equal(normalizeCatalogProduct({...base,sale_unit:null,stock_quantity:null,quantity:'invalid'}).purchasable,false);
+  assert.equal(normalizeCatalogProduct({...base,sale_unit:'pack',stock_quantity:null,pack_weight_kg:1}).purchasable,false);
 });

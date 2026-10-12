@@ -1,27 +1,17 @@
 import 'dotenv/config';
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
+import { databaseClients } from './database.js';
+import { createCatalogLoader } from './catalogRepository.js';
 import { createDeliveryQuote, verifyDeliveryQuote, DeliveryQuoteError } from './addressDelivery.js';
 import { getDeliverySettings } from './deliverySettings.js';
 import { installSecurity, databaseRateStore } from './security.js';
 import { authorizeOrder, orderAccessToken, checkout, CommerceError, databaseCommerceRepository, parseReview, validateContext, type CommerceRepository } from './commerce.js';
-import { normalizeCatalog, PRODUCT_PUBLIC_COLUMNS } from './catalog.js';
 import { DEFAULT_CATEGORIES } from '../src/types.js';
 import { INITIAL_DELIVERY_AREAS } from '../src/deliveryData.js';
 import { generateOrderReceiptHtml } from '../src/lib/orderReceipt.js';
 
-// Privileged access is server-only and never falls back to a publishable key.
-const databaseUrl = process.env.SUPABASE_URL;
-const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-const db = databaseUrl && secretKey ? createClient(databaseUrl,secretKey,{auth:{persistSession:false,autoRefreshToken:false}}) : null;
-const publicKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-const catalogDb = db || (databaseUrl && publicKey ? createClient(databaseUrl,publicKey,{auth:{persistSession:false,autoRefreshToken:false}}) : null);
-async function catalog() {
-  if (!catalogDb) throw new CommerceError('The catalog is temporarily unavailable.',503,'CATALOG_UNAVAILABLE');
-  const {data,error} = await catalogDb.from('products').select(PRODUCT_PUBLIC_COLUMNS).abortSignal(AbortSignal.timeout(5000));
-  if (error || !data) throw new CommerceError('The catalog is temporarily unavailable.',503,'CATALOG_UNAVAILABLE');
-  return normalizeCatalog(data);
-}
+const {privileged:db,catalog:catalogDb}=databaseClients();
+const catalog=createCatalogLoader(catalogDb);
 const notificationsEnabled = () => process.env.APP_ENV === 'production' && process.env.ENABLE_CUSTOMER_NOTIFICATIONS === 'true' && (!process.env.VERCEL || process.env.VERCEL_ENV === 'production');
 export function createApplication(overrides: { repository?:CommerceRepository; catalog?:()=>Promise<any[]>; settings?:()=>Promise<any>; rateStore?:any; production?:boolean; quoteVerifier?:any; sendReceipt?:(order:any)=>Promise<any> } = {}) {
   const app = express(), repository = overrides.repository || databaseCommerceRepository(db), loadCatalog = overrides.catalog || catalog;

@@ -23,7 +23,7 @@ test('Mapbox requests use longitude first, permanent storage, local bias and pre
   await forwardMapbox('House 14-B Street 25', 'pk.test');
   assert.equal(urls[0].searchParams.get('country'), 'pk');
   assert.equal(urls[0].searchParams.get('permanent'), 'true');
-  assert.equal(urls[0].searchParams.get('proximity'), '73.10451,33.567348');
+  assert.equal(urls[0].searchParams.get('proximity'), '73.1044791,33.567341');
   await reverseMapbox(33.681234, 73.011234, 'pk.test');
   assert.equal(urls[1].searchParams.get('latitude'), '33.681234');
   assert.equal(urls[1].searchParams.get('longitude'), '73.011234');

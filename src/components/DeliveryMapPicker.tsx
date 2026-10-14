@@ -7,8 +7,8 @@ import { detectDeviceLocation } from "../lib/geolocation";
 import { validCoordinates, type AddressDetails, type MapboxPlace } from "../lib/mapbox";
 import { formatDistanceKm } from "../lib/mapUtils";
 
-export const STORE_EXACT_COORDINATES = { lat: 33.567348, lng: 73.104510 };
-export const STORE_EXACT_DETAILS = { name: "Babay Dee Atta Chakki", address: "Main Gulraiz Phase 3 / High Court Rd, Rawalpindi", mapsUrl: "https://maps.app.goo.gl/k7Cjakmyvd227jpE7", pricePerKm: 50, maxDeliveryDistanceKm: 45 };
+export const STORE_EXACT_COORDINATES = { lat: 33.567341, lng: 73.1044791 };
+export const STORE_EXACT_DETAILS = { name: "Babay Dee Atta Chakki", address: "Main Gulraiz Phase 3 / High Court Rd, Rawalpindi", mapsUrl: "https://maps.app.goo.gl/XYR14ymesAJdSA1v5", pricePerKm: 50, maxDeliveryDistanceKm: 30 };
 interface Selection { lat: number; lng: number; address: string; city: string; area: string; distanceKm: number; deliveryCharge: number; deliverable: boolean; details?: AddressDetails }
 interface Props {
   initialLat?: number; initialLng?: number; initialAddress?: string;

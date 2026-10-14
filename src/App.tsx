@@ -86,8 +86,8 @@ export const GOOGLE_MAPS_PLATFORM_KEY =
   (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY || "";
 
 export const STORE_EXACT_LOCATION = {
-  lat: 33.567348,
-  lng: 73.104510,
+  lat: 33.567341,
+  lng: 73.1044791,
   address: "Main Gulraiz Phase 3 / High Court Rd, Rawalpindi",
   name: "Babay Dee Atta Chakki (Central Depot)"
 };

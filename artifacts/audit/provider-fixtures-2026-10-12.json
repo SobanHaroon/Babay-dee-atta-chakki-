@@ -1,0 +1,1348 @@
+{
+  "testedAt": "2026-10-12T15:09:07.159Z",
+  "note": "Equivalent unfiltered API query, not a captured playground request. All addresses synthetic. Store coordinates verified from the owner-provided Google Maps place link; house positions are NOT verified. Area-centre routes are test pins only.",
+  "results": [
+    {
+      "fixture": 1,
+      "address": "House 14, Street 5, Gulraiz Phase 3, Rawalpindi",
+      "queries": [
+        {
+          "text": "House 14, Street 5, Gulraiz Phase 3, Rawalpindi",
+          "stage": "full"
+        },
+        {
+          "text": "Street 5 Gulrez Phase 3 Rawalpindi",
+          "stage": "street"
+        },
+        {
+          "text": "gulrez Phase 3, Rawalpindi",
+          "stage": "area"
+        },
+        {
+          "text": "gulrez, Rawalpindi",
+          "stage": "neighborhood"
+        }
+      ],
+      "status": "error",
+      "error": {
+        "code": 23,
+        "status": 0,
+        "message": "The operation was aborted due to timeout"
+      },
+      "elapsedMs": 10072
+    },
+    {
+      "fixture": 2,
+      "address": "House 14, Street 5, Sector C, Bahria Town Phase 8, Rawalpindi",
+      "queries": [
+        {
+          "text": "House 14, Street 5, Sector C, Bahria Town Phase 8, Rawalpindi",
+          "stage": "full"
+        },
+        {
+          "text": "Street 5 Sector C Bahria Town Phase 8 Rawalpindi",
+          "stage": "street"
+        },
+        {
+          "text": "Sector C bahria Phase 8, Rawalpindi",
+          "stage": "area"
+        },
+        {
+          "text": "Sector C Bahria Town Phase 8 Rawalpindi",
+          "stage": "area"
+        },
+        {
+          "text": "bahria Phase 8, Rawalpindi",
+          "stage": "parent"
+        },
+        {
+          "text": "bahria, Rawalpindi",
+          "stage": "neighborhood"
+        }
+      ],
+      "status": "error",
+      "error": {
+        "code": 23,
+        "status": 0,
+        "message": "The operation was aborted due to timeout"
+      },
+      "elapsedMs": 10026
+    },
+    {
+      "fixture": 3,
+      "address": "Bahria Town Phase 8, Rawalpindi",
+      "queries": [
+        {
+          "text": "Bahria Town Phase 8, Rawalpindi",
+          "stage": "full"
+        },
+        {
+          "text": "bahria Phase 8, Rawalpindi",
+          "stage": "area"
+        },
+        {
+          "text": "bahria, Rawalpindi",
+          "stage": "neighborhood"
+        }
+      ],
+      "status": "matched",
+      "playgroundEquivalent": {
+        "parameters": {
+          "text": "Bahria Town Phase 8, Rawalpindi",
+          "format": "json",
+          "limit": 8
+        },
+        "status": 200,
+        "response": {
+          "results": [
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "name": "Bahria Town Phase-8",
+              "other_names": {
+                "name": "بحریہ ٹاؤن فیز 8",
+                "name:hi": "बहरिया टाउन फेज़-8"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "county": "Rawalpindi District",
+              "state_district": "Rawalpindi Division",
+              "city": "Rawalpindi",
+              "town": "Rawalpindi Cantonment",
+              "postcode": "46220",
+              "suburb": "Bahria Town Phase-8",
+              "iso3166_2": "PK-PB",
+              "lon": 73.0872635,
+              "lat": 33.5012685,
+              "state_code": "PB",
+              "result_type": "suburb",
+              "formatted": "Bahria Town Phase-8, Rawalpindi Cantonment, Rawalpindi 46220, Pakistan",
+              "address_line1": "Bahria Town Phase-8",
+              "address_line2": "Rawalpindi Cantonment, Rawalpindi 46220, Pakistan",
+              "category": "populated_place",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MG32P+GW",
+              "plus_code_short": "G32P+GW Rawalpindi, Rawalpindi District, Pakistan",
+              "rank": {
+                "importance": 0.14672871824216063,
+                "popularity": 1.3244062404409758,
+                "confidence": 0,
+                "match_type": "full_match"
+              },
+              "place_id": "519ca8a5b99545524059eb01f39029c04040f00103f9014a5ee01503000000c0020592031342616872696120546f776e2050686173652d38",
+              "bbox": {
+                "lon1": 73.0672635,
+                "lat1": 33.4812685,
+                "lon2": 73.1072635,
+                "lat2": 33.5212685
+              }
+            },
+            {
+              "country_code": "pk",
+              "name": "Bahria Town Phase 8",
+              "country": "Pakistan",
+              "county": "Rawalpindi",
+              "datasource": {
+                "sourcename": "whosonfirst",
+                "attribution": "Who's On First",
+                "license": "CC0",
+                "url": "https://www.whosonfirst.org/docs/licenses/"
+              },
+              "state": "Punjab",
+              "state_code": "PB",
+              "city": "Rawalpindi",
+              "suburb": "Bahria Town Phase 8",
+              "iso3166_2": "PK-PB",
+              "lon": 73.079532,
+              "lat": 33.495738,
+              "result_type": "suburb",
+              "formatted": "Bahria Town Phase 8, Rawalpindi, Pakistan",
+              "address_line1": "Bahria Town Phase 8",
+              "address_line2": "Rawalpindi, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MF3WH+7R",
+              "plus_code_short": "F3WH+7R Rawalpindi, Pakistan",
+              "rank": {
+                "popularity": 1.2663475225397862,
+                "confidence": 0,
+                "match_type": "full_match"
+              },
+              "place_id": "5112bf620d174552405936b1c05774bf4040c0020592031342616872696120546f776e2050686173652038e2032477686f736f6e66697273743a6e65696768626f7572686f6f643a31373830303236383333",
+              "bbox": {
+                "lon1": 73.052657,
+                "lat1": 33.467778,
+                "lon2": 73.116633,
+                "lat2": 33.516949
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "county": "Rawalpindi District",
+              "state_district": "Rawalpindi Division",
+              "city": "Rawalpindi",
+              "postcode": "46220",
+              "suburb": "Bahria Town Phase-8",
+              "street": "Bahria Expy",
+              "housenumber": "Bahria Expressway",
+              "iso3166_2": "PK-PB",
+              "lon": 73.0860419,
+              "lat": 33.5186734,
+              "state_code": "PB",
+              "county_code": "RP",
+              "result_type": "building",
+              "formatted": "Bahria Expressway Bahria Expy, Bahria Town Phase-8, Rawalpindi 46220, Pakistan",
+              "address_line1": "Bahria Expressway Bahria Expy",
+              "address_line2": "Bahria Town Phase-8, Rawalpindi 46220, Pakistan",
+              "category": "building.commercial",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MG39P+FC",
+              "plus_code_short": "G39P+FC Rawalpindi, Rawalpindi District, Pakistan",
+              "rank": {
+                "importance": 0.00006205157549396531,
+                "popularity": 1.6113727072590585,
+                "confidence": 0,
+                "match_type": "full_match"
+              },
+              "place_id": "517ca5e2b581455240590e27d5e363c24040f00102f9019a99c32d00000000c00203e203236f70656e7374726565746d61703a616464726573733a7761792f373637373933353632",
+              "bbox": {
+                "lon1": 73.0857951,
+                "lat1": 33.5184565,
+                "lon2": 73.0862833,
+                "lat2": 33.5188813
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "name": "standard care hospital",
+              "other_names": {
+                "name:ur": "اسٹینڈرڈ کیئر ہسپتال"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "county": "Rawalpindi District",
+              "state_district": "Rawalpindi Division",
+              "city": "Bahria Town",
+              "municipality": "Chaklala Cantonment",
+              "postcode": "46220",
+              "suburb": "Bahria Town Phase 4",
+              "street": "Allama Iqbal Avenue",
+              "housenumber": "118 block c civic center bahria town",
+              "iso3166_2": "PK-PB",
+              "lon": 73.1256581,
+              "lat": 33.5504519,
+              "state_code": "PB",
+              "county_code": "RP",
+              "result_type": "building",
+              "formatted": "118 block c civic center bahria town Allama Iqbal Avenue, Bahria Town Phase 4, Bahria Town 46220, Pakistan",
+              "address_line1": "118 block c civic center bahria town Allama Iqbal Avenue",
+              "address_line2": "Bahria Town Phase 4, Bahria Town 46220, Pakistan",
+              "category": "healthcare.hospital",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MH42G+57",
+              "rank": {
+                "importance": 0.00006205157549396531,
+                "popularity": 1.8122973533518139,
+                "confidence": 0,
+                "match_type": "full_match"
+              },
+              "place_id": "518f7e45c80a48524059b242363575c64040f00103f9017ba6c51403000000c002039203167374616e64617264206361726520686f73706974616ce203266f70656e7374726565746d61703a616464726573733a6e6f64652f3133323333333939343139",
+              "bbox": {
+                "lon1": 73.1256081,
+                "lat1": 33.5504019,
+                "lon2": 73.1257081,
+                "lat2": 33.5505019
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "name": "ZOOM Real Estate & KMK Builders",
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "county": "Rawalpindi District",
+              "state_district": "Rawalpindi Division",
+              "city": "Rawalpindi",
+              "town": "Rawalpindi Cantonment",
+              "postcode": "46000",
+              "suburb": "Bahria Town Phase-8",
+              "retail": "Bahria Town Hub Commercial",
+              "street": "Service Road",
+              "housenumber": "Akram Center, Plaza No. 185",
+              "iso3166_2": "PK-PB",
+              "lon": 73.0969462,
+              "lat": 33.4922418,
+              "state_code": "PB",
+              "county_code": "RP",
+              "result_type": "building",
+              "formatted": "Akram Center, Plaza No. 185 Service Road, Bahria Town Phase-8, Rawalpindi 46000, Pakistan",
+              "address_line1": "Akram Center, Plaza No. 185 Service Road",
+              "address_line2": "Bahria Town Phase-8, Rawalpindi 46000, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MF3RW+VQ",
+              "plus_code_short": "F3RW+VQ Rawalpindi, Rawalpindi District, Pakistan",
+              "rank": {
+                "importance": 0.00006205157549396531,
+                "popularity": 1.3310473225772552,
+                "confidence": 0,
+                "match_type": "full_match"
+              },
+              "place_id": "512d9ed55d3446524059b25c80c701bf4040f00103f901cc073df301000000c0020392031f5a4f4f4d205265616c204573746174652026204b4d4b204275696c64657273e203256f70656e7374726565746d61703a616464726573733a6e6f64652f38333735383330343736",
+              "bbox": {
+                "lon1": 73.0968962,
+                "lat1": 33.4921918,
+                "lon2": 73.0969962,
+                "lat2": 33.4922918
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "name": "Wurfel IT Pvt Ltd",
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "county": "Rawalpindi District",
+              "state_district": "Rawalpindi Division",
+              "city": "Rawalpindi",
+              "town": "Rawalpindi Cantonment",
+              "postcode": "46000",
+              "suburb": "Bahria Town Phase-8",
+              "street": "Street 70",
+              "housenumber": "Appartment E-02",
+              "iso3166_2": "PK-PB",
+              "lon": 73.105848,
+              "lat": 33.5175816,
+              "state_code": "PB",
+              "county_code": "RP",
+              "result_type": "building",
+              "formatted": "Appartment E-02 Street 70, Bahria Town Phase-8, Rawalpindi 46000, Pakistan",
+              "address_line1": "Appartment E-02 Street 70",
+              "address_line2": "Bahria Town Phase-8, Rawalpindi 46000, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MG494+28",
+              "plus_code_short": "G494+28 Rawalpindi, Rawalpindi District, Pakistan",
+              "rank": {
+                "importance": 0.00006205157549396531,
+                "popularity": 1.6244861966520263,
+                "confidence": 0,
+                "match_type": "full_match"
+              },
+              "place_id": "513596b036c6465240597481261d40c24040f00103f9017ac04db801000000c0020392031157757266656c20495420507674204c7464e203256f70656e7374726565746d61703a616464726573733a6e6f64652f37333837303730353836",
+              "bbox": {
+                "lon1": 73.105798,
+                "lat1": 33.5175316,
+                "lon2": 73.105898,
+                "lat2": 33.5176316
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "county": "Rawalpindi District",
+              "state_district": "Rawalpindi Division",
+              "city": "Rawalpindi",
+              "postcode": "46220",
+              "suburb": "Bahria Town Phase-8",
+              "street": "Bahria Expy",
+              "housenumber": "DHA Phase 8",
+              "iso3166_2": "PK-PB",
+              "lon": 73.0855946,
+              "lat": 33.5181618,
+              "state_code": "PB",
+              "county_code": "RP",
+              "result_type": "building",
+              "formatted": "DHA Phase 8 Bahria Expy, Bahria Town Phase-8, Rawalpindi 46220, Pakistan",
+              "address_line1": "DHA Phase 8 Bahria Expy",
+              "address_line2": "Bahria Town Phase-8, Rawalpindi 46220, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MG39P+76",
+              "plus_code_short": "G39P+76 Rawalpindi, Rawalpindi District, Pakistan",
+              "rank": {
+                "importance": 0.00006205157549396531,
+                "popularity": 1.6110799029255543,
+                "confidence": 0,
+                "match_type": "full_match"
+              },
+              "place_id": "51b5edc5617a45524059ac84382053c24040f00103f9010b65c7aa01000000c00203e203256f70656e7374726565746d61703a616464726573733a6e6f64652f37313630313631353437",
+              "bbox": {
+                "lon1": 73.0855446,
+                "lat1": 33.5181118,
+                "lon2": 73.0856446,
+                "lat2": 33.5182118
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "county": "Rawalpindi District",
+              "state_district": "Rawalpindi Division",
+              "city": "Rawalpindi",
+              "town": "Rawalpindi Cantonment",
+              "street": "Link Road",
+              "housenumber": "168",
+              "iso3166_2": "PK-PB",
+              "lon": 73.0928679,
+              "lat": 33.4818879,
+              "state_code": "PB",
+              "county_code": "RP",
+              "suburb": "Bahria Town Phase 8",
+              "result_type": "building",
+              "postcode": "47310",
+              "formatted": "168 Link Road, Bahria Town Phase 8, Rawalpindi 47310, Pakistan",
+              "address_line1": "168 Link Road",
+              "address_line2": "Bahria Town Phase 8, Rawalpindi 47310, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MF3JV+Q4",
+              "plus_code_short": "F3JV+Q4 Rawalpindi, Rawalpindi District, Pakistan",
+              "rank": {
+                "importance": 0.00006205157549396531,
+                "popularity": 1.2831792787747982,
+                "confidence": 0,
+                "match_type": "full_match"
+              },
+              "place_id": "514956348cf145524059476bb180aebd4040f00103f901844a15e201000000c00203e203256f70656e7374726565746d61703a616464726573733a6e6f64652f38303838303133343434",
+              "bbox": {
+                "lon1": 73.0928179,
+                "lat1": 33.4818379,
+                "lon2": 73.0929179,
+                "lat2": 33.4819379
+              }
+            }
+          ],
+          "query": {
+            "text": "Bahria Town Phase 8, Rawalpindi"
+          }
+        }
+      },
+      "candidates": [
+        {
+          "latitude": 33.5012685,
+          "longitude": 73.0872635,
+          "matchedAddress": "Bahria Town Phase-8, Rawalpindi",
+          "name": "Bahria Town Phase-8",
+          "city": "Rawalpindi",
+          "area": "Bahria Town Phase-8",
+          "county": "Rawalpindi District",
+          "region": "Punjab",
+          "street": "",
+          "type": "phase",
+          "confidence": 0,
+          "provider": "Geoapify"
+        },
+        {
+          "latitude": 33.495738,
+          "longitude": 73.079532,
+          "matchedAddress": "Bahria Town Phase 8, Rawalpindi",
+          "name": "Bahria Town Phase 8",
+          "city": "Rawalpindi",
+          "area": "Bahria Town Phase 8",
+          "county": "Rawalpindi",
+          "region": "Punjab",
+          "street": "",
+          "type": "phase",
+          "confidence": 0,
+          "provider": "Geoapify"
+        }
+      ],
+      "syntheticPinRoute": {
+        "distanceKm": 13.404,
+        "fee": 670,
+        "provider": "Geoapify drive metric",
+        "isHouseLocationVerified": false
+      },
+      "elapsedMs": 6112
+    },
+    {
+      "fixture": 4,
+      "address": "House 14, Street 5, Sector G-13/1, Islamabad",
+      "queries": [
+        {
+          "text": "House 14, Street 5, Sector G-13/1, Islamabad",
+          "stage": "full"
+        },
+        {
+          "text": "Street 5 Sector G-13/1 Islamabad",
+          "stage": "street"
+        },
+        {
+          "text": "G-13/1, Islamabad",
+          "stage": "area"
+        },
+        {
+          "text": "Sector G-13/1 Islamabad",
+          "stage": "area"
+        },
+        {
+          "text": "G-13, Islamabad",
+          "stage": "parent"
+        }
+      ],
+      "status": "matched",
+      "playgroundEquivalent": {
+        "parameters": {
+          "text": "House 14, Street 5, Sector G-13/1, Islamabad",
+          "format": "json",
+          "limit": 8
+        },
+        "status": 200,
+        "response": {
+          "results": [
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Islamabad Capital Territory",
+              "city": "Islamabad",
+              "municipality": "Zone 1",
+              "postcode": "44000",
+              "suburb": "I-11",
+              "street": "Street 5",
+              "iso3166_2": "PK-IS",
+              "lon": 73.012989,
+              "lat": 33.6419376,
+              "state_code": "IS",
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 5, I-11, Islamabad 44000, Pakistan",
+              "address_line1": "14 Street 5",
+              "address_line2": "I-11, Islamabad 44000, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MJ2R7+Q5",
+              "plus_code_short": "J2R7+Q5 Islamabad, Islamabad Capital Territory, Pakistan",
+              "rank": {
+                "importance": 0.05340174944686042,
+                "popularity": 2.2061165183222142,
+                "confidence": 0.45,
+                "confidence_city_level": 1,
+                "confidence_street_level": 1,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "514c8dd0cfd4405240594f09e3022bd24040c00203",
+              "bbox": {
+                "lon1": 73.0118713,
+                "lat1": 33.6413434,
+                "lon2": 73.0141068,
+                "lat2": 33.6425315
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "other_names": {
+                "name": "اسٹریٹ 5",
+                "name:ar": "شارع 5",
+                "name:ur": "اسٹریٹ 5"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Islamabad Capital Territory",
+              "city": "Islamabad",
+              "municipality": "Zone 1",
+              "postcode": "44000",
+              "suburb": "G-7",
+              "street": "Street 5",
+              "iso3166_2": "PK-IS",
+              "lon": 73.0650923,
+              "lat": 33.7072902,
+              "state_code": "IS",
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 5, G-7, Islamabad 44000, Pakistan",
+              "address_line1": "14 Street 5",
+              "address_line2": "G-7, Islamabad 44000, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MP348+W2",
+              "plus_code_short": "P348+W2 Islamabad, Islamabad Capital Territory, Pakistan",
+              "rank": {
+                "importance": 0.05340174944686042,
+                "popularity": 2.7370346918921102,
+                "confidence": 0.45,
+                "confidence_city_level": 1,
+                "confidence_street_level": 1,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "512ceee4782a4452405902e43a7c88da4040c00203",
+              "bbox": {
+                "lon1": 73.0633789,
+                "lat1": 33.7057715,
+                "lon2": 73.0671407,
+                "lat2": 33.7083575
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "other_names": {
+                "name": "اسٹریٹ 5",
+                "name:ar": "شارع 5",
+                "name:ps": "سړک 5",
+                "name:ur": "اسٹریٹ 5"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Islamabad Capital Territory",
+              "city": "Islamabad",
+              "municipality": "Zone 1",
+              "postcode": "44000",
+              "suburb": "F-8",
+              "street": "Street 5",
+              "iso3166_2": "PK-IS",
+              "lon": 73.0434488,
+              "lat": 33.7180461,
+              "state_code": "IS",
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 5, F-8, Islamabad 44000, Pakistan",
+              "address_line1": "14 Street 5",
+              "address_line2": "F-8, Islamabad 44000, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MP29V+69",
+              "plus_code_short": "9V+69 Islamabad, Islamabad Capital Territory, Pakistan",
+              "rank": {
+                "importance": 0.05340174944686042,
+                "popularity": 2.628905543933092,
+                "confidence": 0.45,
+                "confidence_city_level": 1,
+                "confidence_street_level": 1,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "513ac379ddc7425240599b4242efe8db4040c00203",
+              "bbox": {
+                "lon1": 73.041608,
+                "lat1": 33.7171021,
+                "lon2": 73.0452896,
+                "lat2": 33.71899
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "other_names": {
+                "name": "اسٹریٹ 5",
+                "name:ar": "شارع 5",
+                "name:ps": "سړک 5",
+                "name:ur": "اسٹریٹ 5"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Islamabad Capital Territory",
+              "city": "Islamabad",
+              "municipality": "Zone 1",
+              "postcode": "44000",
+              "suburb": "H-9",
+              "street": "Street 5",
+              "iso3166_2": "PK-IS",
+              "lon": 73.0475971,
+              "lat": 33.6688518,
+              "state_code": "IS",
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 5, H-9, Islamabad 44000, Pakistan",
+              "address_line1": "14 Street 5",
+              "address_line2": "H-9, Islamabad 44000, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MM29X+G2",
+              "plus_code_short": "M29X+G2 Islamabad, Islamabad Capital Territory, Pakistan",
+              "rank": {
+                "importance": 0.05340174944686042,
+                "popularity": 2.5155944482749257,
+                "confidence": 0.45,
+                "confidence_city_level": 1,
+                "confidence_street_level": 1,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "519bf8b4d40b43524059746f8fef9cd54040c00203",
+              "bbox": {
+                "lon1": 73.0461016,
+                "lat1": 33.6680985,
+                "lon2": 73.0490878,
+                "lat2": 33.6696145
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "other_names": {
+                "name": "اسٹریٹ 5",
+                "name:ar": "شارع 5",
+                "name:ps": "سړک 5",
+                "name:ur": "اسٹریٹ 5"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Islamabad Capital Territory",
+              "city": "Islamabad",
+              "municipality": "Zone 1",
+              "postcode": "44000",
+              "suburb": "I-9",
+              "street": "Street 5",
+              "iso3166_2": "PK-IS",
+              "lon": 73.0578783,
+              "lat": 33.6596526,
+              "state_code": "IS",
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 5, I-9, Islamabad 44000, Pakistan",
+              "address_line1": "14 Street 5",
+              "address_line2": "I-9, Islamabad 44000, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MM355+V5",
+              "plus_code_short": "M355+V5 Islamabad, Islamabad Capital Territory, Pakistan",
+              "rank": {
+                "importance": 0.05340174944686042,
+                "popularity": 2.6136773335503127,
+                "confidence": 0.45,
+                "confidence_city_level": 1,
+                "confidence_street_level": 1,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "517a692f47b44352405956dc137f6fd44040c00203",
+              "bbox": {
+                "lon1": 73.0566771,
+                "lat1": 33.6590295,
+                "lon2": 73.0590795,
+                "lat2": 33.6602756
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "other_names": {
+                "name": "اسٹریٹ 5",
+                "name:ar": "شارع 5",
+                "name:ps": "سړک 5",
+                "name:ur": "اسٹریٹ 5"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Islamabad Capital Territory",
+              "city": "Islamabad",
+              "municipality": "Zone 1",
+              "postcode": "44000",
+              "suburb": "E-9",
+              "street": "Street 5",
+              "iso3166_2": "PK-IS",
+              "lon": 73.0144544,
+              "lat": 33.7181043,
+              "state_code": "IS",
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 5, E-9, Islamabad 44000, Pakistan",
+              "address_line1": "14 Street 5",
+              "address_line2": "E-9, Islamabad 44000, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MP297+6Q",
+              "plus_code_short": "P297+6Q Islamabad, Islamabad Capital Territory, Pakistan",
+              "rank": {
+                "importance": 0.05340174944686042,
+                "popularity": 2.160997612775645,
+                "confidence": 0.45,
+                "confidence_city_level": 1,
+                "confidence_street_level": 1,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "5122d225d2ec40524059f9ce79d7eadb4040c00203",
+              "bbox": {
+                "lon1": 73.0136129,
+                "lat1": 33.7178407,
+                "lon2": 73.0152958,
+                "lat2": 33.7183678
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "other_names": {
+                "name": "اسٹریٹ 5",
+                "name:ar": "شارع 5",
+                "name:ps": "سړک 5",
+                "name:ur": "اسٹریٹ 5"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Islamabad Capital Territory",
+              "city": "Islamabad",
+              "municipality": "Zone 1",
+              "postcode": "44000",
+              "suburb": "I-8 Markaz Ground",
+              "street": "Street 5",
+              "iso3166_2": "PK-IS",
+              "lon": 73.0716066,
+              "lat": 33.6608801,
+              "state_code": "IS",
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 5, I-8 Markaz Ground, Islamabad 44000, Pakistan",
+              "address_line1": "14 Street 5",
+              "address_line2": "I-8 Markaz Ground, Islamabad 44000, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MM36C+9J",
+              "plus_code_short": "M36C+9J Islamabad, Islamabad Capital Territory, Pakistan",
+              "rank": {
+                "importance": 0.05340174944686042,
+                "popularity": 2.648204865956403,
+                "confidence": 0.45,
+                "confidence_city_level": 1,
+                "confidence_street_level": 1,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "51604bd9339544524059e20918b897d44040c00203",
+              "bbox": {
+                "lon1": 73.0710864,
+                "lat1": 33.6606136,
+                "lon2": 73.0721229,
+                "lat2": 33.6611541
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "other_names": {
+                "name": "اسٹریٹ 5",
+                "name:ar": "شارع 5",
+                "name:ps": "سړک 5",
+                "name:ur": "اسٹریٹ 5"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Islamabad Capital Territory",
+              "city": "Islamabad",
+              "municipality": "Zone 1",
+              "postcode": "44000",
+              "suburb": "E-8",
+              "street": "Street 5",
+              "iso3166_2": "PK-IS",
+              "lon": 73.0372027,
+              "lat": 33.7262831,
+              "state_code": "IS",
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 5, E-8, Islamabad 44000, Pakistan",
+              "address_line1": "14 Street 5",
+              "address_line2": "E-8, Islamabad 44000, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MP2GP+GV",
+              "plus_code_short": "GP+GV Islamabad, Islamabad Capital Territory, Pakistan",
+              "rank": {
+                "importance": 0.05340174944686042,
+                "popularity": 2.01295043119342,
+                "confidence": 0.45,
+                "confidence_city_level": 1,
+                "confidence_street_level": 1,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "51aaf46e8761425240599a1139d8f6dc4040c00203",
+              "bbox": {
+                "lon1": 73.0370518,
+                "lat1": 33.7257768,
+                "lon2": 73.0373535,
+                "lat2": 33.7267894
+              }
+            }
+          ],
+          "query": {
+            "text": "House 14, Street 5, Sector G-13/1, Islamabad",
+            "parsed": {
+              "house": "house",
+              "housenumber": "14",
+              "street": "street 5",
+              "city": "islamabad",
+              "expected_type": "amenity"
+            }
+          }
+        }
+      },
+      "candidates": [
+        {
+          "latitude": 33.6503209,
+          "longitude": 72.9632702,
+          "matchedAddress": "G-13, Islamabad",
+          "name": "G-13",
+          "city": "Islamabad",
+          "area": "G-13",
+          "county": "",
+          "region": "Islamabad Capital Territory",
+          "street": "",
+          "type": "sector",
+          "confidence": 1,
+          "provider": "Geoapify"
+        }
+      ],
+      "syntheticPinRoute": {
+        "distanceKm": 18.819,
+        "fee": 941,
+        "provider": "Geoapify drive metric",
+        "isHouseLocationVerified": false
+      },
+      "elapsedMs": 16117
+    },
+    {
+      "fixture": 5,
+      "address": "plaza 47 jinnah bolevard sector E DHA 2 islamabad",
+      "queries": [
+        {
+          "text": "plaza 47 jinnah bolevard sector E DHA 2 islamabad",
+          "stage": "full"
+        },
+        {
+          "text": "plaza 47 jinnah boulevard sector E DHA Phase 2 islamabad",
+          "stage": "normalized"
+        },
+        {
+          "text": "jinnah boulevard sector E DHA Phase 2 islamabad",
+          "stage": "street"
+        },
+        {
+          "text": "Sector E DHA Phase 2, Islamabad",
+          "stage": "area"
+        },
+        {
+          "text": "DHA Phase 2, Islamabad",
+          "stage": "parent"
+        },
+        {
+          "text": "DHA, Islamabad",
+          "stage": "neighborhood"
+        }
+      ],
+      "status": "matched",
+      "candidates": [
+        {
+          "latitude": 33.531409,
+          "longitude": 73.158741,
+          "matchedAddress": "DHA Phase 2, Islamabad",
+          "name": "DHA Phase 2",
+          "city": "Islamabad",
+          "area": "DHA Phase 2",
+          "county": "",
+          "region": "Islamabad Capital Territory",
+          "street": "",
+          "type": "phase",
+          "confidence": 0.375,
+          "provider": "Geoapify"
+        }
+      ],
+      "syntheticPinRoute": {
+        "distanceKm": 9.952,
+        "fee": 498,
+        "provider": "Geoapify drive metric",
+        "isHouseLocationVerified": false
+      },
+      "elapsedMs": 12880
+    },
+    {
+      "fixture": 6,
+      "address": "Flat 4 Street 9 Sector F-10/2 Islamabad",
+      "queries": [
+        {
+          "text": "Flat 4 Street 9 Sector F-10/2 Islamabad",
+          "stage": "full"
+        },
+        {
+          "text": "Street 9 Sector F-10/2 Islamabad",
+          "stage": "street"
+        },
+        {
+          "text": "F-10/2, Islamabad",
+          "stage": "area"
+        },
+        {
+          "text": "Sector F-10/2 Islamabad",
+          "stage": "area"
+        },
+        {
+          "text": "F-10, Islamabad",
+          "stage": "parent"
+        }
+      ],
+      "status": "matched",
+      "candidates": [
+        {
+          "latitude": 33.6918206,
+          "longitude": 73.0066844,
+          "matchedAddress": "F-10, Islamabad",
+          "name": "F-10",
+          "city": "Islamabad",
+          "area": "F-10",
+          "county": "",
+          "region": "Islamabad Capital Territory",
+          "street": "",
+          "type": "sector",
+          "confidence": 0,
+          "provider": "Geoapify"
+        },
+        {
+          "latitude": 33.692304,
+          "longitude": 73.005147,
+          "matchedAddress": "Sector F-10, Islamabad",
+          "name": "Sector F-10",
+          "city": "Islamabad",
+          "area": "Sector F-10",
+          "county": "",
+          "region": "Islamabad Capital Territory",
+          "street": "",
+          "type": "sector",
+          "confidence": 0,
+          "provider": "Geoapify"
+        }
+      ],
+      "elapsedMs": 20477
+    },
+    {
+      "fixture": 7,
+      "address": "Plot 20 Street 4 Soan Garden Islamabad",
+      "queries": [
+        {
+          "text": "Plot 20 Street 4 Soan Garden Islamabad",
+          "stage": "full"
+        },
+        {
+          "text": "Street 4 Soan Garden Islamabad",
+          "stage": "street"
+        },
+        {
+          "text": "soan garden, Islamabad",
+          "stage": "area"
+        }
+      ],
+      "status": "matched",
+      "candidates": [
+        {
+          "latitude": 33.562535,
+          "longitude": 73.1534991,
+          "matchedAddress": "Soan Garden, Zone V",
+          "name": "Soan Garden",
+          "city": "Zone V",
+          "area": "Soan Garden",
+          "county": "",
+          "region": "Islamabad Capital Territory",
+          "street": "",
+          "type": "neighborhood",
+          "confidence": 0.81,
+          "provider": "Geoapify"
+        }
+      ],
+      "elapsedMs": 7886
+    },
+    {
+      "fixture": 8,
+      "address": "House 10 Saidpur Road Satellite Town Rawalpindi",
+      "queries": [
+        {
+          "text": "House 10 Saidpur Road Satellite Town Rawalpindi",
+          "stage": "full"
+        },
+        {
+          "text": "Saidpur Road Satellite Town Rawalpindi",
+          "stage": "street"
+        },
+        {
+          "text": "satellite, Rawalpindi",
+          "stage": "area"
+        }
+      ],
+      "status": "matched",
+      "candidates": [
+        {
+          "latitude": 33.6384026,
+          "longitude": 73.0696929,
+          "matchedAddress": "Satellite Town, Chah Sultan",
+          "name": "Satellite Town",
+          "city": "Chah Sultan",
+          "area": "Satellite Town",
+          "county": "Rawalpindi District",
+          "region": "Punjab",
+          "street": "",
+          "type": "neighborhood",
+          "confidence": 0,
+          "provider": "Geoapify"
+        }
+      ],
+      "elapsedMs": 6019
+    },
+    {
+      "fixture": 9,
+      "address": "مکان ۱۴ گلی ۵ گلریز فیز ۳ راولپنڈی",
+      "queries": [
+        {
+          "text": "مکان ۱۴ گلی ۵ گلریز فیز ۳ راولپنڈی",
+          "stage": "full"
+        },
+        {
+          "text": "House 14 Street 5 Gulrez Phase 3 Rawalpindi",
+          "stage": "normalized"
+        },
+        {
+          "text": "Street 5 Gulrez Phase 3 Rawalpindi",
+          "stage": "street"
+        },
+        {
+          "text": "gulrez Phase 3, Rawalpindi",
+          "stage": "area"
+        },
+        {
+          "text": "gulrez, Rawalpindi",
+          "stage": "neighborhood"
+        }
+      ],
+      "status": "matched",
+      "candidates": [
+        {
+          "latitude": 33.5618388,
+          "longitude": 73.105382,
+          "matchedAddress": "Gulrez Housing, Bahria Town",
+          "name": "Gulrez Housing",
+          "city": "Bahria Town",
+          "area": "Gulrez Housing",
+          "county": "Rawalpindi District",
+          "region": "Punjab",
+          "street": "",
+          "type": "neighborhood",
+          "confidence": 0.2,
+          "provider": "Geoapify"
+        }
+      ],
+      "elapsedMs": 8424
+    },
+    {
+      "fixture": 10,
+      "address": "House 99 Street 999 Imaginary Sector ZZZ Rawalpindi",
+      "queries": [
+        {
+          "text": "House 99 Street 999 Imaginary Sector ZZZ Rawalpindi",
+          "stage": "full"
+        },
+        {
+          "text": "Street 999 Imaginary Sector ZZZ Rawalpindi",
+          "stage": "street"
+        },
+        {
+          "text": "imaginary zzz, Rawalpindi",
+          "stage": "area"
+        },
+        {
+          "text": "Imaginary Sector ZZZ Rawalpindi",
+          "stage": "area"
+        }
+      ],
+      "status": "error",
+      "error": {
+        "code": "PROVIDER_TIMEOUT",
+        "status": 504,
+        "message": "The map service took too long to respond. Please try again."
+      },
+      "elapsedMs": 12479
+    }
+  ]
+}

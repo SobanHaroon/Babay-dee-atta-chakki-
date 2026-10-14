@@ -8,7 +8,7 @@ const known = fs.existsSync('.env') ? Object.entries(dotenv.parse(fs.readFileSyn
 const found = new Map();
 function scan(content, location, scope) {
   const types = new Set();
-  for (const [name,value] of known) if (content.includes(value)) types.add(name.startsWith('VITE_') || name.includes('MAPBOX') && value.startsWith('pk.') ? 'public-map-token' : name.includes('GEOAPIFY') ? 'geoapify-api-key' : 'environment-secret');
+  for (const [name,value] of known) if (content.includes(value)) types.add(name.includes('MAPBOX') && value.startsWith('pk.') ? 'public-map-token' : /SUPABASE.*(?:PUBLISHABLE|ANON).*KEY/.test(name) || value.startsWith('sb_publishable_') ? 'public-supabase-key' : name.includes('GEOAPIFY') ? 'geoapify-api-key' : 'environment-secret');
   if (/sb_secret_[A-Za-z0-9_-]{15,}/.test(content)) types.add('supabase-secret-key');
   if (/\bre_[A-Za-z0-9]{20,}/.test(content)) types.add('resend-api-key');
   if (/\bsk\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}/.test(content)) types.add('mapbox-secret-token');

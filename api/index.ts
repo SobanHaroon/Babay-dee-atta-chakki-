@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import {databaseStaffQueue, dispatchStaffNotification, validWorkerAuthorization} from './staffNotifications.js';
 import { databaseClients } from './database.js';
 import { createCatalogLoader } from './catalogRepository.js';
 import { createDeliveryQuote, verifyDeliveryQuote, DeliveryQuoteError } from './addressDelivery.js';
@@ -13,8 +14,10 @@ import { generateOrderReceiptHtml } from '../src/lib/orderReceipt.js';
 const {privileged:db,catalog:catalogDb}=databaseClients();
 const catalog=createCatalogLoader(catalogDb);
 const notificationsEnabled = () => process.env.APP_ENV === 'production' && process.env.ENABLE_CUSTOMER_NOTIFICATIONS === 'true' && (!process.env.VERCEL || process.env.VERCEL_ENV === 'production');
-export function createApplication(overrides: { repository?:CommerceRepository; catalog?:()=>Promise<any[]>; settings?:()=>Promise<any>; rateStore?:any; production?:boolean; quoteVerifier?:any; sendReceipt?:(order:any)=>Promise<any> } = {}) {
+export function createApplication(overrides: { repository?:CommerceRepository; catalog?:()=>Promise<any[]>; settings?:()=>Promise<any>; rateStore?:any; production?:boolean; quoteVerifier?:any; sendReceipt?:(order:any)=>Promise<any>; staffDispatch?:(orderId?:string,requestId?:string)=>Promise<string> } = {}) {
   const app = express(), repository = overrides.repository || databaseCommerceRepository(db), loadCatalog = overrides.catalog || catalog;
+  // Injected repositories never contact the live notification queue during tests.
+  const staffDispatch=overrides.staffDispatch || (overrides.repository ? async()=> 'disabled' : (orderId?:string,requestId?:string)=>dispatchStaffNotification(databaseStaffQueue(db),{orderId,requestId}));
   const settings = overrides.settings || (()=>getDeliverySettings(db));
   const production = overrides.production ?? process.env.NODE_ENV === 'production';
   installSecurity(app,{production,rateStore:overrides.rateStore || (production ? databaseRateStore(db) : undefined)});
@@ -49,12 +52,20 @@ export function createApplication(overrides: { repository?:CommerceRepository; c
   }));
   app.post('/api/checkout',endpoint(async(req,res)=>{
     const result=await checkout(req.body,req.get('Idempotency-Key'),{repository,catalog:loadCatalog,quote:async(input)=> overrides.quoteVerifier ? overrides.quoteVerifier(input) : verifyDeliveryQuote(input.quoteToken,input.address,await settings(),{checkoutContext:input.checkoutContext,addressVersion:input.addressVersion})});
-    // No customer or staff contact in development/preview. Persisted retries never resend.
+    // Queue claims make retries safe. Staff alerts are independently opted in.
+    try {await staffDispatch(result.orderId,res.locals.requestId);} catch {console.warn(JSON.stringify({event:'staff_notification_deferred',requestId:res.locals.requestId}));}
+    // Customer messages remain disabled in development/preview. Persisted retries never resend.
     if(result.created && notificationsEnabled()) {
       try { const sms=await import('./smsService.js');await sms.sendOrderConfirmationSMS(result.order); }catch{console.warn(JSON.stringify({event:'order_sms_failed',requestId:res.locals.requestId}));}
       if(result.order.customer.email) try { const mail=await import('./emailService.js');await mail.sendOrderConfirmationEmail(result.order,result.order.customer.email); }catch{console.warn(JSON.stringify({event:'order_email_failed',requestId:res.locals.requestId}));}
     }
     const {created,...response}=result; res.json(response);
+  }));
+  app.get('/api/internal/order-alerts',endpoint(async(req,res)=>{
+    if(!validWorkerAuthorization(req.get('Authorization')))return res.status(401).json({error:'Unauthorized.'});
+    const results:string[]=[];
+    for(let i=0;i<3;i++){const result=await staffDispatch(undefined,res.locals.requestId);results.push(result);if(['empty','disabled','deferred'].includes(result))break;}
+    res.json({results});
   }));
   app.get('/api/order/:id',requireOrder,(req,res)=>res.json(res.locals.order.document));
   app.get('/api/order/:id/receipt-html',requireOrder,(req,res)=>{

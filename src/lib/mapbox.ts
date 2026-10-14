@@ -79,7 +79,7 @@ export async function mapboxRequest(path: string, params: Record<string, string>
 export async function forwardMapbox(query: string, token: string, options: { autocomplete?: boolean; signal?: AbortSignal; proximity?: { lat: number; lng: number } } = {}): Promise<MapboxPlace[]> {
   const q = query.trim().replace(/;/g, ",").slice(0, 256).split(/\s+/).slice(0, 20).join(" ");
   if (q.length < 2) return [];
-  const proximity = options.proximity && validCoordinates(options.proximity.lat, options.proximity.lng) ? options.proximity : { lat: 33.567348, lng: 73.104510 };
+  const proximity = options.proximity && validCoordinates(options.proximity.lat, options.proximity.lng) ? options.proximity : { lat: 33.567341, lng: 73.1044791 };
   const data = await mapboxRequest("search/geocode/v6/forward", {
     q, country: "pk", language: "en", limit: "8", permanent: "true",
     autocomplete: String(options.autocomplete ?? true),

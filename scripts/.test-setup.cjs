@@ -1,2 +1,0 @@
-﻿const fs=require('fs');const f='package.json';const p=JSON.parse(fs.readFileSync(f,'utf8'));p.scripts.test+=' scripts/service-area.test.ts';p.scripts['db:staging']='node scripts/setup-staging-database.mjs';fs.writeFileSync(f,JSON.stringify(p,null,2)+'\n');
-const g='scripts/verify-local-catalog.mjs';let s=fs.readFileSync(g,'utf8');s=s.replace("{errorReason:'BlockedByClient'}:{})});", "{errorReason:'BlockedByClient'}:{})}).catch(()=>{});");fs.writeFileSync(g,s);

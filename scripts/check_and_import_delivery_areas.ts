@@ -1,8 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { INITIAL_DELIVERY_AREAS } from "../src/deliveryData";
 
-const dbUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://dlinknypnlmcrhgbediu.supabase.co";
-const dbKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_KkOjGDoE3yq7tKIKzIfajg_sIoyPlUT";
+const dbUrl = process.env.SUPABASE_URL;
+const dbKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!dbUrl || !dbKey) throw new Error("Server Supabase URL and privileged credentials are required.");
 
 const supabase = createClient(dbUrl, dbKey);
 

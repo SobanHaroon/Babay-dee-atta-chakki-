@@ -1,0 +1,1030 @@
+{
+  "testedAt": "2026-10-12T15:11:10.906Z",
+  "note": "Equivalent unfiltered API query, not a captured playground request. All addresses synthetic. Store coordinates verified from the owner-provided Google Maps place link; house positions are NOT verified. Area-centre routes are test pins only.",
+  "results": [
+    {
+      "fixture": 1,
+      "address": "House 14, Street 5, Gulraiz Phase 3, Rawalpindi",
+      "queries": [
+        {
+          "text": "House 14, Street 5, Gulraiz Phase 3, Rawalpindi",
+          "stage": "full"
+        },
+        {
+          "text": "Street 5 Gulrez Phase 3 Rawalpindi",
+          "stage": "street"
+        },
+        {
+          "text": "gulrez Phase 3, Rawalpindi",
+          "stage": "area"
+        },
+        {
+          "text": "gulrez, Rawalpindi",
+          "stage": "neighborhood"
+        }
+      ],
+      "status": "matched",
+      "playgroundEquivalent": {
+        "parameters": {
+          "text": "House 14, Street 5, Gulraiz Phase 3, Rawalpindi",
+          "format": "json",
+          "limit": 8
+        },
+        "status": 200,
+        "response": {
+          "results": [
+            {
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "city": "Rawalpindi",
+              "town": "Rawalpindi Cantonment",
+              "postcode": "46220",
+              "district": "Rawalpindi District",
+              "suburb": "Bahria Town Phase 7",
+              "street": "Street 54",
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "state_code": "PB",
+              "iso3166_2": "PK-PB",
+              "lon": 73.1224944,
+              "lat": 33.5331944,
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 54, Bahria Town Phase 7, Rawalpindi Cantonment, Rawalpindi District, Rawalpindi 46220, Pakistan",
+              "address_line1": "14 Street 54",
+              "address_line2": "Bahria Town Phase 7, Rawalpindi Cantonment, Rawalpindi District, Rawalpindi 46220, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MG4MC+7X",
+              "plus_code_short": "G4MC+7X Rawalpindi, Punjab, Pakistan",
+              "rank": {
+                "popularity": 1.7265090525853364,
+                "confidence": 0.45,
+                "confidence_city_level": 1,
+                "confidence_street_level": 1,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "515c7cc0f2d6475240598634cfb63fc44040c00203",
+              "bbox": {
+                "lon1": 73.1223354,
+                "lat1": 33.5320472,
+                "lon2": 73.1226477,
+                "lat2": 33.5343404
+              }
+            },
+            {
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "city": "Rawalpindi",
+              "town": "Rawalpindi Cantonment",
+              "postcode": "46220",
+              "district": "Rawalpindi District",
+              "suburb": "Bahria Town Phase 7",
+              "street": "Street 50",
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "state_code": "PB",
+              "iso3166_2": "PK-PB",
+              "lon": 73.1239581,
+              "lat": 33.5331167,
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 50, Bahria Town Phase 7, Rawalpindi Cantonment, Rawalpindi District, Rawalpindi 46220, Pakistan",
+              "address_line1": "14 Street 50",
+              "address_line2": "Bahria Town Phase 7, Rawalpindi Cantonment, Rawalpindi District, Rawalpindi 46220, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MG4MF+6H",
+              "plus_code_short": "G4MF+6H Rawalpindi, Punjab, Pakistan",
+              "rank": {
+                "popularity": 1.7265090525853364,
+                "confidence": 0.45,
+                "confidence_city_level": 1,
+                "confidence_street_level": 1,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "51c164f4edee47524059c9b9032b3dc44040c00203",
+              "bbox": {
+                "lon1": 73.1239149,
+                "lat1": 33.5327053,
+                "lon2": 73.1240014,
+                "lat2": 33.5335281
+              }
+            },
+            {
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "city": "Rawalpindi",
+              "town": "Rawalpindi Cantonment",
+              "postcode": "46220",
+              "district": "Rawalpindi District",
+              "suburb": "Bahria Town Phase 7",
+              "street": "Street 56",
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "state_code": "PB",
+              "iso3166_2": "PK-PB",
+              "lon": 73.1212086,
+              "lat": 33.5330575,
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 56, Bahria Town Phase 7, Rawalpindi Cantonment, Rawalpindi District, Rawalpindi 46220, Pakistan",
+              "address_line1": "14 Street 56",
+              "address_line2": "Bahria Town Phase 7, Rawalpindi Cantonment, Rawalpindi District, Rawalpindi 46220, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MG4MC+6F",
+              "plus_code_short": "G4MC+6F Rawalpindi, Punjab, Pakistan",
+              "rank": {
+                "popularity": 1.7265090525853364,
+                "confidence": 0.45,
+                "confidence_city_level": 1,
+                "confidence_street_level": 1,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "519d3fb7e1c1475240599ab1683a3bc44040c00203",
+              "bbox": {
+                "lon1": 73.1205819,
+                "lat1": 33.5330076,
+                "lon2": 73.1218345,
+                "lat2": 33.5331158
+              }
+            },
+            {
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "city": "Rawalpindi",
+              "town": "Rawalpindi Cantonment",
+              "postcode": "46220",
+              "district": "Rawalpindi District",
+              "street": "Street 5a",
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "state_code": "PB",
+              "iso3166_2": "PK-PB",
+              "lon": 73.109695,
+              "lat": 33.5020009,
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 5a, Rawalpindi Cantonment, Rawalpindi District, Rawalpindi 46220, Pakistan",
+              "address_line1": "14 Street 5a",
+              "address_line2": "Rawalpindi Cantonment, Rawalpindi District, Rawalpindi 46220, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MG425+RV",
+              "plus_code_short": "G425+RV Rawalpindi, Punjab, Pakistan",
+              "rank": {
+                "popularity": 1.329568212660504,
+                "confidence": 0.45,
+                "confidence_city_level": 1,
+                "confidence_street_level": 1,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "5139622d3e05475240590208c49041c04040c00203",
+              "bbox": {
+                "lon1": 73.1094317,
+                "lat1": 33.5019388,
+                "lon2": 73.1099583,
+                "lat2": 33.5020629
+              }
+            },
+            {
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "city": "Bahria Town",
+              "municipality": "Chaklala Cantonment",
+              "postcode": "45710",
+              "district": "Rawalpindi District",
+              "suburb": "Bahria Town Phase 2",
+              "street": "Street 53",
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "state_code": "PB",
+              "iso3166_2": "PK-PB",
+              "lon": 73.1197159,
+              "lat": 33.5628297,
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 53, Rawalpindi District, Bahria Town Phase 2, Bahria Town 45710, Pakistan",
+              "address_line1": "14 Street 53",
+              "address_line2": "Rawalpindi District, Bahria Town Phase 2, Bahria Town 45710, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MH479+4V",
+              "rank": {
+                "popularity": 1.9112803308854467,
+                "confidence": 0.405,
+                "confidence_city_level": 0.9,
+                "confidence_street_level": 0.9,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "51ebd3e06ca947524059d75bb9cd0ac84040c00203",
+              "bbox": {
+                "lon1": 73.1195804,
+                "lat1": 33.5623647,
+                "lon2": 73.1198515,
+                "lat2": 33.5632948
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "other_names": {
+                "alt_name": "Street 5"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "county": "Rawalpindi District",
+              "state_district": "Rawalpindi Division",
+              "city": "Shah Khalid Colony",
+              "municipality": "Chaklala Cantonment",
+              "postcode": "47331",
+              "district": "Gulzar-e-Quaid",
+              "suburb": "Korang Town",
+              "street": "Street 5/C",
+              "iso3166_2": "PK-PB",
+              "lon": 73.1351085,
+              "lat": 33.5967448,
+              "state_code": "PB",
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 5/C, Korang Town, Shah Khalid Colony 47331, Pakistan",
+              "address_line1": "14 Street 5/C",
+              "address_line2": "Korang Town, Shah Khalid Colony 47331, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MH4WP+M2",
+              "rank": {
+                "importance": 0.05340174944686042,
+                "popularity": 1.9973408775222994,
+                "confidence": 0.2025,
+                "confidence_city_level": 0.5,
+                "confidence_street_level": 0.45,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "51583a1f9ea5485240596f07342262cc4040c00203",
+              "bbox": {
+                "lon1": 73.1331938,
+                "lat1": 33.5941673,
+                "lon2": 73.1369993,
+                "lat2": 33.5993045
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "other_names": {
+                "name": "اسٹریٹ 5",
+                "name:ar": "شارع 5",
+                "name:ps": "سړک 5",
+                "name:ur": "اسٹریٹ 5"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "county": "Rawalpindi District",
+              "state_district": "Rawalpindi Division",
+              "city": "Bahria Town",
+              "hamlet": "Zaildar House",
+              "municipality": "Chaklala Cantonment",
+              "postcode": "46610",
+              "street": "Street 5",
+              "iso3166_2": "PK-PB",
+              "lon": 73.1046797,
+              "lat": 33.5651246,
+              "state_code": "PB",
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 5, Bahria Town 46610, Pakistan",
+              "address_line1": "14 Street 5",
+              "address_line2": "Bahria Town 46610, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MH483+2V",
+              "rank": {
+                "importance": 0.05340174944686042,
+                "popularity": 1.9149865253777436,
+                "confidence": 0.225,
+                "confidence_city_level": 0.5,
+                "confidence_street_level": 0.5,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "5187037c12b3465240592195bd0056c84040c00203",
+              "bbox": {
+                "lon1": 73.1030052,
+                "lat1": 33.5645813,
+                "lon2": 73.1063337,
+                "lat2": 33.5658858
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "other_names": {
+                "name": "اسٹریٹ 5",
+                "name:ar": "شارع 5",
+                "name:ps": "سړک 5",
+                "name:ur": "اسٹریٹ 5"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "county": "Rawalpindi District",
+              "state_district": "Rawalpindi Division",
+              "city": "Chaklala Cantonment",
+              "municipality": "Chaklala Cantonment",
+              "postcode": "46000",
+              "suburb": "Chaklala Scheme 3",
+              "street": "Street 5",
+              "iso3166_2": "PK-PB",
+              "lon": 73.0866578,
+              "lat": 33.5889989,
+              "state_code": "PB",
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 5, Chaklala Scheme 3, Chaklala Cantonment 46000, Pakistan",
+              "address_line1": "14 Street 5",
+              "address_line2": "Chaklala Scheme 3, Chaklala Cantonment 46000, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MH3QP+HM",
+              "rank": {
+                "importance": 0.05340174944686042,
+                "popularity": 2.3007858523949882,
+                "confidence": 0.225,
+                "confidence_city_level": 0.5,
+                "confidence_street_level": 0.5,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "515f3c28cd8b45524059a370e25064cb4040c00203",
+              "bbox": {
+                "lon1": 73.0860961,
+                "lat1": 33.5880357,
+                "lon2": 73.0872194,
+                "lat2": 33.5899622
+              }
+            }
+          ],
+          "query": {
+            "text": "House 14, Street 5, Gulraiz Phase 3, Rawalpindi",
+            "parsed": {
+              "house": "house",
+              "housenumber": "14",
+              "street": "street 5",
+              "city": "rawalpindi",
+              "expected_type": "amenity"
+            }
+          }
+        }
+      },
+      "candidates": [
+        {
+          "latitude": 33.5618388,
+          "longitude": 73.105382,
+          "matchedAddress": "Gulrez Housing, Bahria Town",
+          "name": "Gulrez Housing",
+          "city": "Bahria Town",
+          "area": "Gulrez Housing",
+          "county": "Rawalpindi District",
+          "region": "Punjab",
+          "street": "",
+          "type": "neighborhood",
+          "confidence": 0.2,
+          "provider": "Geoapify"
+        }
+      ],
+      "syntheticPinRoute": {
+        "distanceKm": 1.204,
+        "fee": 60,
+        "provider": "Geoapify drive metric",
+        "isHouseLocationVerified": false
+      },
+      "elapsedMs": 20580
+    },
+    {
+      "fixture": 2,
+      "address": "House 14, Street 5, Sector C, Bahria Town Phase 8, Rawalpindi",
+      "queries": [
+        {
+          "text": "House 14, Street 5, Sector C, Bahria Town Phase 8, Rawalpindi",
+          "stage": "full"
+        },
+        {
+          "text": "Street 5 Sector C Bahria Town Phase 8 Rawalpindi",
+          "stage": "street"
+        },
+        {
+          "text": "Sector C bahria Phase 8, Rawalpindi",
+          "stage": "area"
+        },
+        {
+          "text": "Sector C Bahria Town Phase 8 Rawalpindi",
+          "stage": "area"
+        },
+        {
+          "text": "bahria Phase 8, Rawalpindi",
+          "stage": "parent"
+        },
+        {
+          "text": "bahria, Rawalpindi",
+          "stage": "neighborhood"
+        }
+      ],
+      "status": "matched",
+      "playgroundEquivalent": {
+        "parameters": {
+          "text": "House 14, Street 5, Sector C, Bahria Town Phase 8, Rawalpindi",
+          "format": "json",
+          "limit": 8
+        },
+        "status": 200,
+        "response": {
+          "results": [
+            {
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "city": "Rawalpindi",
+              "town": "Rawalpindi Cantonment",
+              "postcode": "46220",
+              "district": "Rawalpindi District",
+              "suburb": "Bahria Town Phase 7",
+              "street": "Street 54",
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "state_code": "PB",
+              "iso3166_2": "PK-PB",
+              "lon": 73.1224944,
+              "lat": 33.5331944,
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 54, Bahria Town Phase 7, Rawalpindi Cantonment, Rawalpindi District, Rawalpindi 46220, Pakistan",
+              "address_line1": "14 Street 54",
+              "address_line2": "Bahria Town Phase 7, Rawalpindi Cantonment, Rawalpindi District, Rawalpindi 46220, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MG4MC+7X",
+              "plus_code_short": "G4MC+7X Rawalpindi, Punjab, Pakistan",
+              "rank": {
+                "popularity": 1.7265090525853364,
+                "confidence": 0.45,
+                "confidence_city_level": 1,
+                "confidence_street_level": 1,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "515c7cc0f2d6475240598634cfb63fc44040c00203",
+              "bbox": {
+                "lon1": 73.1223354,
+                "lat1": 33.5320472,
+                "lon2": 73.1226477,
+                "lat2": 33.5343404
+              }
+            },
+            {
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "city": "Rawalpindi",
+              "town": "Rawalpindi Cantonment",
+              "postcode": "46220",
+              "district": "Rawalpindi District",
+              "suburb": "Bahria Town Phase 7",
+              "street": "Street 50",
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "state_code": "PB",
+              "iso3166_2": "PK-PB",
+              "lon": 73.1239581,
+              "lat": 33.5331167,
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 50, Bahria Town Phase 7, Rawalpindi Cantonment, Rawalpindi District, Rawalpindi 46220, Pakistan",
+              "address_line1": "14 Street 50",
+              "address_line2": "Bahria Town Phase 7, Rawalpindi Cantonment, Rawalpindi District, Rawalpindi 46220, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MG4MF+6H",
+              "plus_code_short": "G4MF+6H Rawalpindi, Punjab, Pakistan",
+              "rank": {
+                "popularity": 1.7265090525853364,
+                "confidence": 0.45,
+                "confidence_city_level": 1,
+                "confidence_street_level": 1,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "51c164f4edee47524059c9b9032b3dc44040c00203",
+              "bbox": {
+                "lon1": 73.1239149,
+                "lat1": 33.5327053,
+                "lon2": 73.1240014,
+                "lat2": 33.5335281
+              }
+            },
+            {
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "city": "Rawalpindi",
+              "town": "Rawalpindi Cantonment",
+              "postcode": "46220",
+              "district": "Rawalpindi District",
+              "suburb": "Bahria Town Phase 7",
+              "street": "Street 56",
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "state_code": "PB",
+              "iso3166_2": "PK-PB",
+              "lon": 73.1212086,
+              "lat": 33.5330575,
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 56, Bahria Town Phase 7, Rawalpindi Cantonment, Rawalpindi District, Rawalpindi 46220, Pakistan",
+              "address_line1": "14 Street 56",
+              "address_line2": "Bahria Town Phase 7, Rawalpindi Cantonment, Rawalpindi District, Rawalpindi 46220, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MG4MC+6F",
+              "plus_code_short": "G4MC+6F Rawalpindi, Punjab, Pakistan",
+              "rank": {
+                "popularity": 1.7265090525853364,
+                "confidence": 0.45,
+                "confidence_city_level": 1,
+                "confidence_street_level": 1,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "519d3fb7e1c1475240599ab1683a3bc44040c00203",
+              "bbox": {
+                "lon1": 73.1205819,
+                "lat1": 33.5330076,
+                "lon2": 73.1218345,
+                "lat2": 33.5331158
+              }
+            },
+            {
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "city": "Rawalpindi",
+              "town": "Rawalpindi Cantonment",
+              "postcode": "46220",
+              "district": "Rawalpindi District",
+              "street": "Street 5a",
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "state_code": "PB",
+              "iso3166_2": "PK-PB",
+              "lon": 73.109695,
+              "lat": 33.5020009,
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 5a, Rawalpindi Cantonment, Rawalpindi District, Rawalpindi 46220, Pakistan",
+              "address_line1": "14 Street 5a",
+              "address_line2": "Rawalpindi Cantonment, Rawalpindi District, Rawalpindi 46220, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MG425+RV",
+              "plus_code_short": "G425+RV Rawalpindi, Punjab, Pakistan",
+              "rank": {
+                "popularity": 1.329568212660504,
+                "confidence": 0.45,
+                "confidence_city_level": 1,
+                "confidence_street_level": 1,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "5139622d3e05475240590208c49041c04040c00203",
+              "bbox": {
+                "lon1": 73.1094317,
+                "lat1": 33.5019388,
+                "lon2": 73.1099583,
+                "lat2": 33.5020629
+              }
+            },
+            {
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "city": "Bahria Town",
+              "municipality": "Chaklala Cantonment",
+              "postcode": "45710",
+              "district": "Rawalpindi District",
+              "suburb": "Bahria Town Phase 2",
+              "street": "Street 53",
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "state_code": "PB",
+              "iso3166_2": "PK-PB",
+              "lon": 73.1197159,
+              "lat": 33.5628297,
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 53, Rawalpindi District, Bahria Town Phase 2, Bahria Town 45710, Pakistan",
+              "address_line1": "14 Street 53",
+              "address_line2": "Rawalpindi District, Bahria Town Phase 2, Bahria Town 45710, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MH479+4V",
+              "rank": {
+                "popularity": 1.9112803308854467,
+                "confidence": 0.405,
+                "confidence_city_level": 0.9,
+                "confidence_street_level": 0.9,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "51ebd3e06ca947524059d75bb9cd0ac84040c00203",
+              "bbox": {
+                "lon1": 73.1195804,
+                "lat1": 33.5623647,
+                "lon2": 73.1198515,
+                "lat2": 33.5632948
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "other_names": {
+                "alt_name": "Street 5"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "county": "Rawalpindi District",
+              "state_district": "Rawalpindi Division",
+              "city": "Shah Khalid Colony",
+              "municipality": "Chaklala Cantonment",
+              "postcode": "47331",
+              "district": "Gulzar-e-Quaid",
+              "suburb": "Korang Town",
+              "street": "Street 5/C",
+              "iso3166_2": "PK-PB",
+              "lon": 73.1351085,
+              "lat": 33.5967448,
+              "state_code": "PB",
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 5/C, Korang Town, Shah Khalid Colony 47331, Pakistan",
+              "address_line1": "14 Street 5/C",
+              "address_line2": "Korang Town, Shah Khalid Colony 47331, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MH4WP+M2",
+              "rank": {
+                "importance": 0.05340174944686042,
+                "popularity": 1.9973408775222994,
+                "confidence": 0.2025,
+                "confidence_city_level": 0.5,
+                "confidence_street_level": 0.45,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "51583a1f9ea5485240596f07342262cc4040c00203",
+              "bbox": {
+                "lon1": 73.1331938,
+                "lat1": 33.5941673,
+                "lon2": 73.1369993,
+                "lat2": 33.5993045
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "other_names": {
+                "name": "اسٹریٹ 5",
+                "name:ar": "شارع 5",
+                "name:ps": "سړک 5",
+                "name:ur": "اسٹریٹ 5"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "county": "Rawalpindi District",
+              "state_district": "Rawalpindi Division",
+              "city": "Bahria Town",
+              "hamlet": "Zaildar House",
+              "municipality": "Chaklala Cantonment",
+              "postcode": "46610",
+              "street": "Street 5",
+              "iso3166_2": "PK-PB",
+              "lon": 73.1046797,
+              "lat": 33.5651246,
+              "state_code": "PB",
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 5, Bahria Town 46610, Pakistan",
+              "address_line1": "14 Street 5",
+              "address_line2": "Bahria Town 46610, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MH483+2V",
+              "rank": {
+                "importance": 0.05340174944686042,
+                "popularity": 1.9149865253777436,
+                "confidence": 0.225,
+                "confidence_city_level": 0.5,
+                "confidence_street_level": 0.5,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "5187037c12b3465240592195bd0056c84040c00203",
+              "bbox": {
+                "lon1": 73.1030052,
+                "lat1": 33.5645813,
+                "lon2": 73.1063337,
+                "lat2": 33.5658858
+              }
+            },
+            {
+              "datasource": {
+                "sourcename": "openstreetmap",
+                "attribution": "© OpenStreetMap contributors",
+                "license": "Open Database License",
+                "url": "https://www.openstreetmap.org/copyright"
+              },
+              "other_names": {
+                "name": "اسٹریٹ 5",
+                "name:ar": "شارع 5",
+                "name:ps": "سړک 5",
+                "name:ur": "اسٹریٹ 5"
+              },
+              "country": "Pakistan",
+              "country_code": "pk",
+              "state": "Punjab",
+              "county": "Rawalpindi District",
+              "state_district": "Rawalpindi Division",
+              "city": "Chaklala Cantonment",
+              "municipality": "Chaklala Cantonment",
+              "postcode": "46000",
+              "suburb": "Chaklala Scheme 3",
+              "street": "Street 5",
+              "iso3166_2": "PK-PB",
+              "lon": 73.0866578,
+              "lat": 33.5889989,
+              "state_code": "PB",
+              "housenumber": "14",
+              "result_type": "building",
+              "formatted": "14 Street 5, Chaklala Scheme 3, Chaklala Cantonment 46000, Pakistan",
+              "address_line1": "14 Street 5",
+              "address_line2": "Chaklala Scheme 3, Chaklala Cantonment 46000, Pakistan",
+              "timezone": {
+                "name": "Asia/Karachi",
+                "offset_STD": "+05:00",
+                "offset_DST": "+05:00",
+                "offset_STD_seconds": 18000,
+                "offset_DST_seconds": 18000,
+                "abbreviation_STD": "PKT",
+                "abbreviation_DST": "PKT"
+              },
+              "plus_code": "8J5MH3QP+HM",
+              "rank": {
+                "importance": 0.05340174944686042,
+                "popularity": 2.3007858523949882,
+                "confidence": 0.225,
+                "confidence_city_level": 0.5,
+                "confidence_street_level": 0.5,
+                "confidence_building_level": 0,
+                "match_type": "match_by_building"
+              },
+              "place_id": "515f3c28cd8b45524059a370e25064cb4040c00203",
+              "bbox": {
+                "lon1": 73.0860961,
+                "lat1": 33.5880357,
+                "lon2": 73.0872194,
+                "lat2": 33.5899622
+              }
+            }
+          ],
+          "query": {
+            "text": "House 14, Street 5, Sector C, Bahria Town Phase 8, Rawalpindi",
+            "parsed": {
+              "house": "house",
+              "housenumber": "14",
+              "street": "street 5",
+              "city": "rawalpindi",
+              "expected_type": "amenity"
+            }
+          }
+        }
+      },
+      "candidates": [
+        {
+          "latitude": 33.5012685,
+          "longitude": 73.0872635,
+          "matchedAddress": "Bahria Town Phase-8, Rawalpindi",
+          "name": "Bahria Town Phase-8",
+          "city": "Rawalpindi",
+          "area": "Bahria Town Phase-8",
+          "county": "Rawalpindi District",
+          "region": "Punjab",
+          "street": "",
+          "type": "phase",
+          "confidence": 0,
+          "provider": "Geoapify"
+        },
+        {
+          "latitude": 33.495738,
+          "longitude": 73.079532,
+          "matchedAddress": "Bahria Town Phase 8, Rawalpindi",
+          "name": "Bahria Town Phase 8",
+          "city": "Rawalpindi",
+          "area": "Bahria Town Phase 8",
+          "county": "Rawalpindi",
+          "region": "Punjab",
+          "street": "",
+          "type": "phase",
+          "confidence": 0,
+          "provider": "Geoapify"
+        }
+      ],
+      "syntheticPinRoute": {
+        "distanceKm": 13.404,
+        "fee": 670,
+        "provider": "Geoapify drive metric",
+        "isHouseLocationVerified": false
+      },
+      "elapsedMs": 21188
+    }
+  ]
+}

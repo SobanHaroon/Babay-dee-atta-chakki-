@@ -34,3 +34,7 @@ The owner supplied Supabase configuration after the initial fix. It was stored o
 `node scripts/verify-local-catalog.mjs` passed against the actual local API/database without product fixtures: 161 rendered product cards, desktop and mobile verified, and all mutating API requests blocked. Screenshots/results are under `artifacts/catalog-live`. A tracked-source scan found no copy of the supplied secret. No hosted environment was modified and no database records were changed.
 
 The products currently have unconfirmed sale/stock metadata and therefore remain non-purchasable under the existing catalog validation. Display and synchronization are now verified independently of that owner-data requirement. The secret supplied in chat should be rotated and its replacement set in local/hosting private environments.
+
+## Follow-up: owner-confirmed units and checkout verification
+
+The owner has now confirmed kilogram sales, `quantity / 10` as kilograms of stock, and zero as out of stock. Available products are purchasable in the corrected catalog. The store pin and delivery rules have also been confirmed (Rs. 50/km, Rs. 50 minimum, 30 km maximum). See [the 12 October checkout follow-up](CHECKOUT-FOLLOWUP-2026-10-12.md) for the current migration requirements, actual tests, remaining hosted database blocker and deployment/rollback steps. Earlier statements above about unconfirmed product units and an unverified store pin describe the earlier investigation state.

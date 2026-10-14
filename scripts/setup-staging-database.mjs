@@ -1,7 +1,6 @@
 ﻿import 'dotenv/config';
 import {Client} from 'pg';
-import {readFile} from 'node:fs/promises';
-const migrations=['scripts/20261002_catalog_access.sql','scripts/20261002_secure_commerce.sql','scripts/20261011_confirm_kg_catalog.sql'];
+import {commerceMigrationSql,commerceMigrations as migrations} from './build-commerce-migration.mjs';
 const connection=process.env.STAGING_DATABASE_URL;
 if(!connection){console.error('STAGING_DATABASE_URL is missing. Add a separate staging PostgreSQL connection to ignored .env.');process.exit(1);}
 let target;try{target=new URL(connection);}catch{console.error('STAGING_DATABASE_URL is not a valid PostgreSQL URL.');process.exit(1);}
@@ -20,7 +19,8 @@ try{
  if(!process.argv.includes('--apply')){console.log('Read-only preflight complete. Use --apply to install the listed migrations in this staging database.');}
  else{
   if(!rows[0].products)throw Object.assign(new Error(),{code:'STAGING_PRODUCTS_SCHEMA_REQUIRED'});
-  for(const file of migrations){await client.query(await readFile(file,'utf8'));console.log(JSON.stringify({migration:file,applied:true}));}
+  await client.query(await commerceMigrationSql());
+  console.log(JSON.stringify({migrations,applied:true,atomic:true}));
   console.log('Staging schema installed. No customer orders or notifications were created.');
  }
 }catch(error){console.error(JSON.stringify({event:'staging_database_setup_failed',code:/^[A-Z0-9_]+$/.test(error.code||'')?error.code:'CONNECTION_OR_MIGRATION_FAILED'}));process.exitCode=1;}

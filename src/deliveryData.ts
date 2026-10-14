@@ -1,7 +1,7 @@
 /**
  * Delivery System Core Definitions & Dynamic Map Route Price Calculator
  * All delivery fees and distances are dynamically computed via Google Maps Platform & Route APIs
- * Store Origin: Babay Dee Atta Chakki, Main Gulraiz Phase 3 / High Court Rd, Rawalpindi (33.567348, 73.104510)
+ * Store Origin: Babay Dee Atta Chakki, Main Gulraiz Phase 3 / High Court Rd, Rawalpindi (33.567341, 73.1044791)
  */
 
 export interface DeliveryAreaRecord {
@@ -24,8 +24,8 @@ export const MAX_DELIVERY_DISTANCE_KM = 30; // Maximum delivery radius from Gulr
 export const STORE_LOCATION = {
   name: "Babay Dee Atta Chakki",
   address: "Main Gulraiz Phase 3 / High Court Rd, Rawalpindi",
-  lat: 33.567348,
-  lng: 73.104510
+  lat: 33.567341,
+  lng: 73.1044791
 };
 
 /**

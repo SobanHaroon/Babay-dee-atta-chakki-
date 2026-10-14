@@ -25,7 +25,7 @@ try {
   const productCount=await until(()=>evaluate('document.querySelectorAll("h3[title]").length'),'real catalog cards');
   const body=await evaluate('document.body.innerText');assert.match(body,/161\s+items in catalog/);assert.equal(body.includes('The catalog could not be loaded'),false);assert.doesNotMatch(body,/SALE DETAILS UNCONFIRMED|Unit unconfirmed|DETAILS NEED CONFIRMATION/);assert.match(body,/OUT OF STOCK/);
   await mkdir('artifacts/catalog-live',{recursive:true});
-  await evaluate('document.querySelector("h3[title]").scrollIntoView({block:"center"})');await pause(800);
+  await evaluate('document.querySelector("h3[title]").scrollIntoView({block:"center"})');await until(()=>evaluate('Array.from(document.querySelectorAll("h3[title]")).slice(0,4).every(h=>{const img=h.closest("[id^=product-card-container-]")?.querySelector("img");return !img||(img.complete&&img.naturalWidth>0);})'),'visible catalog images');await pause(2500);
   const shot=await send('Page.captureScreenshot',{format:'png'});await writeFile('artifacts/catalog-live/desktop.png',Buffer.from(shot.data,'base64'));
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await pause(600);
   assert.equal(await evaluate('document.documentElement.scrollWidth<=390'),true);

@@ -38,6 +38,7 @@ export function databaseCommerceRepository(db: any): CommerceRepository {
   function available() { if (!db) throw new CommerceError('Checkout is temporarily unavailable. Your basket has been kept.', 503, 'DATABASE_UNAVAILABLE'); }
   function failed(error: any) {
     const message = String(error?.message || '');
+    if (['42P01','42883','PGRST202','PGRST205'].includes(error?.code)) throw new CommerceError('Ordering is not available yet. Your basket has been kept. Please contact the store.',503,'DATABASE_SETUP_REQUIRED');
     if (message.includes('STOCK_CHANGED')) throw new CommerceError('Stock changed while you were checking out. Please refresh your basket.', 409, 'STOCK_CHANGED');
     if (message.includes('PRICE_CHANGED')) throw new CommerceError('A product price changed. Please refresh your basket.', 409, 'PRICE_CHANGED');
     if (message.includes('IDEMPOTENCY_CONFLICT')) throw new CommerceError('This checkout retry contains different details. Please start a new checkout.', 409, 'IDEMPOTENCY_CONFLICT');
@@ -45,7 +46,7 @@ export function databaseCommerceRepository(db: any): CommerceRepository {
   }
   return {
     async findRetry(context,_key) { available(); const {data,error} = await db.from('secure_orders').select(storedColumns).eq('checkout_context',context).maybeSingle().abortSignal(AbortSignal.timeout(5000)); if(error) failed(error); return data; },
-    async place(record) { available(); const {data,error} = await db.rpc('place_secure_order',{p_order:record}).abortSignal(AbortSignal.timeout(10000)); if(error || !data?.record) failed(error); return data; },
+    async place(record) { available(); const {data,error} = await db.rpc('place_store_order',{p_order:record}).abortSignal(AbortSignal.timeout(10000)); if(error || !data?.record) failed(error); return data; },
     async findOrder(id) { available(); const {data,error} = await db.from('secure_orders').select(storedColumns).eq('id',id).maybeSingle().abortSignal(AbortSignal.timeout(5000)); if(error) failed(error); return data; },
     async claimReceipt(id) { available(); const {data,error} = await db.rpc('claim_order_receipt',{p_order_id:id}).abortSignal(AbortSignal.timeout(5000)); if(error) failed(error); return data === true; },
     async reviews() { available(); const {data,error} = await db.from('customer_reviews').select('id,name,rating,city,review,created_at,verified_purchase').eq('status','approved').eq('is_synthetic',false).order('created_at',{ascending:false}).limit(100).abortSignal(AbortSignal.timeout(5000)); if(error) failed(error); return (data || []).map((r:any) => ({id:r.id,name:r.name,rating:r.rating,city:r.city,review:r.review,date:r.created_at.slice(0,10),verifiedPurchase:r.verified_purchase === true})); },

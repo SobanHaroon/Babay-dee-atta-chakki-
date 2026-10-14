@@ -73,3 +73,29 @@ test('public HTTP operations deny removed admin routes, isolate tracking and res
   const missingContext=await fetch(base+'/api/delivery/quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address:input.address})});assert.equal(missingContext.status,400);
  }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));}
 });
+import {databaseCommerceRepository} from '../api/commerce.js';
+test('missing database tables/functions report setup failure separately from transient storage errors',async()=>{
+ for(const code of ['42P01','42883','PGRST202','PGRST205','08006']){
+  const db={from(){return {select(){return this;},eq(){return this;},maybeSingle(){return this;},async abortSignal(){return {data:null,error:{code}};}};}};
+  await assert.rejects(databaseCommerceRepository(db).findRetry('synthetic','key'),(e:any)=>e.code===(code==='08006'?'DATABASE_UNAVAILABLE':'DATABASE_SETUP_REQUIRED'));
+ }
+});
+
+test('HTTP checkout sends staff alerts after persistence and tolerates ntfy failure',async()=>{
+ const r=repository();let calls=0;
+ const app=createApplication({repository:r.repo,catalog:async()=>[product],rateStore:memoryRateStore(),production:false,
+  staffDispatch:async id=>{calls++;assert.ok(id&&r.rows.has(id));throw Error('Synthetic ntfy outage');}});
+ const server=app.listen(0,'127.0.0.1');await new Promise<void>(resolve=>server.once('listening',resolve));
+ const base='http://127.0.0.1:'+(server.address() as any).port;
+ const input=body(),headers={'Content-Type':'application/json','Idempotency-Key':input.checkoutContext};
+ try{
+  const first=await fetch(base+'/api/checkout',{method:'POST',headers,body:JSON.stringify(input)});assert.equal(first.status,200);
+  const saved=await first.json();assert.ok(saved.orderId);assert.equal(calls,1);
+  const retry=await fetch(base+'/api/checkout',{method:'POST',headers,body:JSON.stringify(input)});assert.equal(retry.status,200);
+  assert.equal((await retry.json()).orderId,saved.orderId);assert.equal(r.inserts,1);
+  const invalid=body({cartItems:[{id:'missing',quantity:1}]});const before=calls;
+  const failed=await fetch(base+'/api/checkout',{method:'POST',headers:{...headers,'Idempotency-Key':invalid.checkoutContext},body:JSON.stringify(invalid)});
+  assert.notEqual(failed.status,200);assert.equal(calls,before);
+  assert.equal((await fetch(base+'/api/internal/order-alerts')).status,401);assert.equal(calls,before);
+ }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});

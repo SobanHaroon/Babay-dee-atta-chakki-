@@ -41,5 +41,11 @@
     "api/index.ts": {
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/internal/order-alerts",
+      "schedule": "0 0 * * *"
+    }
+  ]
 }

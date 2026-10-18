@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {createDeliveryQuote,deliverySearchSequence,resolveDeliveryCandidates,matchAddress,matchLocality,matchNeighborhood,signDeliveryQuote,verifyDeliveryQuote,deliveryFee,clearAddressCache,type AddressMatch} from '../api/addressDelivery.js';
-import {parseGeocodingResponse,geoapifySearch} from '../api/geoapify.js';
-import {correctAddressText,lookupQueries,withoutHouse,sectorId} from '../api/addressText.js';
+import {createDeliveryQuote,deliverySearchSequence,resolveDeliveryCandidates,matchAddress,matchLocality,matchNeighborhood,signDeliveryQuote,verifyDeliveryQuote,deliveryFee,clearAddressCache,type AddressMatch} from '../server/addressDelivery.js';
+import {parseGeocodingResponse,geoapifySearch} from '../server/geoapify.js';
+import {correctAddressText,lookupQueries,withoutHouse,sectorId} from '../server/addressText.js';
 import {deliveryReducer,initialDeliveryState} from '../src/lib/deliveryCheckout.js';
-import {getDeliverySettings} from '../api/deliverySettings.js';
+import {getDeliverySettings} from '../server/deliverySettings.js';
 process.env.NODE_ENV='test';
 process.env.GEOAPIFY_GEOCODING_KEY='synthetic-geocoding-key';
 process.env.GEOAPIFY_ROUTING_KEY='synthetic-routing-key';

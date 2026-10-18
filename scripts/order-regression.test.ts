@@ -2,9 +2,9 @@
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {createApplication} from '../api/index.js';
-import {checkout,authorizeOrder,parseReview,CommerceError,type CommerceRepository,type StoredOrder} from '../api/commerce.js';
-import {signDeliveryQuote,verifyDeliveryQuote} from '../api/addressDelivery.js';
-import {memoryRateStore} from '../api/security.js';
+import {checkout,authorizeOrder,parseReview,CommerceError,type CommerceRepository,type StoredOrder} from '../server/commerce.js';
+import {signDeliveryQuote,verifyDeliveryQuote} from '../server/addressDelivery.js';
+import {memoryRateStore} from '../server/security.js';
 import {upcomingDeliveryDays} from '../src/lib/commerce.js';
 process.env.NODE_ENV='test';process.env.ORDER_ACCESS_SECRET='synthetic-order-access-secret-with-over-32-characters';process.env.DELIVERY_QUOTE_SECRET='synthetic-quote-secret-with-over-32-characters';
 process.env.ENABLE_CUSTOMER_NOTIFICATIONS='false';process.env.APP_ENV='test';
@@ -73,7 +73,7 @@ test('public HTTP operations deny removed admin routes, isolate tracking and res
   const missingContext=await fetch(base+'/api/delivery/quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address:input.address})});assert.equal(missingContext.status,400);
  }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));}
 });
-import {databaseCommerceRepository} from '../api/commerce.js';
+import {databaseCommerceRepository} from '../server/commerce.js';
 test('missing database tables/functions report setup failure separately from transient storage errors',async()=>{
  for(const code of ['42P01','42883','PGRST202','PGRST205','08006']){
   const db={from(){return {select(){return this;},eq(){return this;},maybeSingle(){return this;},async abortSignal(){return {data:null,error:{code}};}};}};

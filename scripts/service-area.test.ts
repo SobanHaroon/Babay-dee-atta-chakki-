@@ -1,6 +1,6 @@
 ﻿import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createDeliveryQuote,verifyDeliveryQuote} from '../api/addressDelivery.js';
+import {createDeliveryQuote,verifyDeliveryQuote} from '../server/addressDelivery.js';
 const settings={storeLatitude:33.567341,storeLongitude:73.1044791,pricePerKm:50,minDeliveryFee:50,maxDeliveryDistanceKm:30,serviceAreas:['Rawalpindi','Islamabad']};
 const context={checkoutContext:'11111111-1111-4111-8111-111111111111',addressVersion:1,confirmedPin:{latitude:33.58,longitude:73.1}};
 test('owner service areas are verified from the pin, bound into quotes and limited to 30 road kilometres',async()=>{

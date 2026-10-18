@@ -1,7 +1,7 @@
 ﻿import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createCatalogLoader} from '../api/catalogRepository.js';
-import {databaseClients} from '../api/database.js';
+import {createCatalogLoader} from '../server/catalogRepository.js';
+import {databaseClients} from '../server/database.js';
 import {createApplication} from '../api/index.js';
 const row={id:'1','product name':'Synthetic Atta',price:170,quantity:'00000'};
 function database(available:string[],rows:any[]=[row],failure?:any){

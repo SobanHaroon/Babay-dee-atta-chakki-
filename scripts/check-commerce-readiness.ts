@@ -1,5 +1,5 @@
 ﻿import 'dotenv/config';
-import {databaseClients} from '../api/database.js';
+import {databaseClients} from '../server/database.js';
 
 // Read-only schema probes: limit(0) never returns product/customer/order records.
 const {privileged:db}=databaseClients();

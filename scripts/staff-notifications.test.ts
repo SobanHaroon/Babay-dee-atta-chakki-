@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {databaseStaffQueue,formatStaffOrder,dispatchStaffNotification,staffNotificationsEnabled,validWorkerAuthorization,type StaffQueue} from '../api/staffNotifications.js';
+import {databaseStaffQueue,formatStaffOrder,dispatchStaffNotification,staffNotificationsEnabled,validWorkerAuthorization,type StaffQueue} from '../server/staffNotifications.js';
 
 const env={ENABLE_STAFF_NOTIFICATIONS:'true',NTFY_TOPIC:'synthetic_topic',NTFY_ACCESS_TOKEN:'synthetic-secret',APP_ENV:'development'};
 const job={orderId:'BDEC-synthetic',legacyOrderId:123456,leaseToken:'synthetic-lease',total:600,fulfillmentType:'delivery',deliveryDate:'2026-10-20',deliverySlot:'Morning',details:{customer:{name:'Synthetic Customer',phone:'03000000000',email:'synthetic@example.test',address:'House 14, Street 5, Gulraiz Rawalpindi'},items:[{name:'Chakki Atta',quantity:1,unit:'Kg',price:180},{name:'Mota Atta',quantity:2,unit:'Kg',price:180}],subtotal:540,deliveryCharges:60,discount:0}};

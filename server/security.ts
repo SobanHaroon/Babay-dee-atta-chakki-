@@ -13,11 +13,12 @@ export function memoryRateStore(): RateStore {
     return { allowed: ++entry.count <= limit, retryAfter: Math.max(1, Math.ceil((entry.expires - now) / 1000)) };
   } };
 }
+export class RateStoreError extends Error {constructor(public code:string){super('Shared rate store unavailable');}}
 export function databaseRateStore(db: any): RateStore {
   return { async consume(key, limit, seconds) {
-    if (!db) throw new Error('Shared rate store unavailable');
+    if (!db) throw new RateStoreError('DATABASE_CONFIGURATION');
     const { data, error } = await db.rpc('consume_api_rate_limit', { p_key: key, p_limit: limit, p_window_seconds: seconds }).abortSignal(AbortSignal.timeout(3000));
-    if (error || !data || typeof data.allowed !== 'boolean') throw new Error('Shared rate store unavailable');
+    if (error || !data || typeof data.allowed !== 'boolean') throw new RateStoreError(/^[A-Z0-9]{3,20}$/.test(error?.code||'') ? error.code : 'RATE_STORE_RESPONSE');
     return { allowed: data.allowed, retryAfter: Number(data.retry_after) || seconds };
   } };
 }
@@ -66,12 +67,12 @@ export function installSecurity(app: Express, options: { rateStore?: RateStore; 
     try {
       const catalogRead=['GET','HEAD'].includes(req.method)&&(/^\/api\/(?:health|categories|products|featured-products|popular-products)$/.test(req.path)||/^\/api\/product\/[^/]+$/.test(req.path));
       const secret = catalogRead ? catalogRateSecret : process.env.RATE_LIMIT_SECRET || process.env.ORDER_ACCESS_SECRET;
-      if (production && (!secret || secret.length < 32)) throw new Error('Rate key unavailable');
+      if (production && (!secret || secret.length < 32)) throw new RateStoreError('RATE_LIMIT_CONFIGURATION');
       const key = createHmac('sha256', secret || 'local-development-only').update(`${bucket}:${requestIp(req)}`).digest('hex');
       const result = await (catalogRead?catalogRateStore:store).consume(key, limit, 60);
       if (!result.allowed) { res.setHeader('Retry-After', String(result.retryAfter)); return res.status(429).json({ error: 'Too many requests. Please wait and try again.', requestId }); }
       next();
-    } catch { console.warn(JSON.stringify({ event: 'rate_limit_unavailable', requestId, bucket })); res.status(503).json({ error: 'Service temporarily unavailable. Please try again shortly.', requestId }); }
+    } catch (error) { const code=error instanceof RateStoreError?error.code:'RATE_STORE_UNAVAILABLE'; console.warn(JSON.stringify({ event: 'rate_limit_unavailable', requestId, bucket, code })); res.status(503).json({ error: 'Service temporarily unavailable. Please try again shortly.', code:'SERVICE_UNAVAILABLE', requestId }); }
   });
 }
 export function normalizePhone(value: unknown) {

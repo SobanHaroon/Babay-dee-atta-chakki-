@@ -1,6 +1,6 @@
 ﻿import test from 'node:test';
 import assert from 'node:assert/strict';
-import {getDeliverySettings} from '../api/deliverySettings.js';
+import {getDeliverySettings} from '../server/deliverySettings.js';
 const keys=['NODE_ENV','STORE_LATITUDE','STORE_LONGITUDE','DELIVERY_RATE_PER_KM','DELIVERY_MAX_DISTANCE_KM','DELIVERY_MIN_FEE','DELIVERY_SERVICE_BOUNDS','DELIVERY_SERVICE_AREAS'];
 function isolated(fn:()=>Promise<void>){return async()=>{const saved=Object.fromEntries(keys.map(k=>[k,process.env[k]]));keys.forEach(k=>delete process.env[k]);process.env.NODE_ENV='test';try{await fn();}finally{for(const k of keys){if(saved[k]===undefined)delete process.env[k];else process.env[k]=saved[k];}}};}
 function database(responses:any[]){const calls:string[]=[];return {calls,client:{from(table:string){assert.equal(table,'delivery_settings');return {select(columns:string){calls.push(columns);return {limit(){return this;},async abortSignal(){return responses.shift();}};}};}}};}

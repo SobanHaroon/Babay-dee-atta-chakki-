@@ -1,8 +1,8 @@
 ﻿import 'dotenv/config';
 import {mkdir,writeFile} from 'node:fs/promises';
-import {resolveDeliveryCandidates,createDeliveryQuote,clearAddressCache,deliverySearchSequence} from '../api/addressDelivery.js';
+import {resolveDeliveryCandidates,createDeliveryQuote,clearAddressCache,deliverySearchSequence} from '../server/addressDelivery.js';
 import {randomUUID} from 'node:crypto';
-import {getDeliverySettings} from '../api/deliverySettings.js';
+import {getDeliverySettings} from '../server/deliverySettings.js';
 // Synthetic fixtures only: this script never creates an order or sends a notification.
 const fixtures=[
  'House 14, Street 5, Gulraiz Phase 3, Rawalpindi',

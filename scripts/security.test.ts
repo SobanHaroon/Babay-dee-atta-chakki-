@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
-import { installSecurity, normalizePhone, priceCart } from '../api/security.js';
+import { installSecurity, normalizePhone, priceCart } from '../server/security.js';
 import app from '../api/index.js';
 
 test('checkout ignores caller-supplied prices and product names', () => {

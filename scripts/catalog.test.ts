@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { catalogNumber, normalizeCatalog, normalizeCatalogProduct } from '../api/catalog.js';
+import { catalogNumber, normalizeCatalog, normalizeCatalogProduct } from '../server/catalog.js';
 
 const base = {id: '4', 'product name': 'CHAKKI ATTA', price: '180', quantity: '200', stock_quantity:200, sale_unit: 'kg'};
 test('stock counts never become sale units or pack weights', () => {

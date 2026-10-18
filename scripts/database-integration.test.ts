@@ -4,8 +4,8 @@ import {readFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
 import {commerceMigrationSql,commerceSetupFile} from './build-commerce-migration.mjs';
-import {checkout,authorizeOrder,databaseCommerceRepository} from '../api/commerce.js';
-import {normalizeCatalog} from '../api/catalog.js';
+import {checkout,authorizeOrder,databaseCommerceRepository} from '../server/commerce.js';
+import {normalizeCatalog} from '../server/catalog.js';
 import {upcomingDeliveryDays} from '../src/lib/commerce.js';
 
 process.env.ORDER_ACCESS_SECRET='synthetic-postgres-test-secret-at-least-32-characters';

@@ -18,3 +18,8 @@ Validation before deployment: 90 tests passed, TypeScript passed, frontend/backe
 Deployment: install the tested branch in Vercel using the existing Git connection. Retain production signing secrets across subsequent deployments. Check live health, catalog, delivery settings, a synthetic delivery quote, and a checkout request with an intentionally nonexistent product (must reject without writing an order).
 
 Rollback: keep the repaired environment variables. If the new application deployment regresses, restore the previous READY Vercel deployment. That older version lacks the latest dashboard bridge, so do not treat rollback as the final checkout solution. No database migration is part of this change.
+## Live verification completed
+
+Vercel deployment `dpl_8NRdeN31zA6iF5nmWu2kkcZ1Bbwd` reached READY and was assigned to babaydeeattachakki.com. Health, catalog and delivery settings returned HTTP 200. The catalog contained 161 products. A synthetic Gulraiz lookup and confirmed candidate pin returned a road quote of 1.204 km / Rs. 60. The same signed quote passed checkout validation and secure-order lookup; an intentionally nonexistent product returned HTTP 409 CART_CHANGED before persistence. No production order, stock deduction or notification occurred.
+
+The production settings and code defects are resolved. Full production order placement was intentionally not exercised; atomic insertion/stock/dashboard/outbox behavior passed the synthetic PostgreSQL tests. Detailed ntfy alerts still require a private topic/access setup before production enablement.

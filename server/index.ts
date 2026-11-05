@@ -4,6 +4,7 @@ import {databaseStaffQueue, dispatchStaffNotification, validWorkerAuthorization}
 import { databaseClients } from './database.js';
 import { createCatalogLoader } from './catalogRepository.js';
 import { createDeliveryQuote, verifyDeliveryQuote, DeliveryQuoteError } from './addressDelivery.js';
+import { geoapifyReverseAddress } from './geoapify.js';
 import { getDeliverySettings } from './deliverySettings.js';
 import { installSecurity, databaseRateStore } from './security.js';
 import { authorizeOrder, orderAccessToken, checkout, CommerceError, databaseCommerceRepository, parseReview, validateContext, type CommerceRepository } from './commerce.js';
@@ -45,6 +46,9 @@ export function createApplication(overrides: { repository?:CommerceRepository; c
   app.get('/api/product/:id',endpoint(async(req,res)=>{const product=(await loadCatalog()).find(p=>p.id===req.params.id);return product?res.json(product):res.status(404).json({error:'Product not found.'});}));
   app.get('/api/delivery/settings',endpoint(async(_req,res)=>{res.json({success:true,data:await settings()});}));
   app.get('/api/delivery-areas',(_req,res)=>res.json({success:true,count:INITIAL_DELIVERY_AREAS.length,data:INITIAL_DELIVERY_AREAS}));
+  app.post('/api/delivery/reverse',endpoint(async(req,res)=>{
+    res.json(await geoapifyReverseAddress(req.body.latitude,req.body.longitude,res.locals.requestId));
+  }));
   app.post('/api/delivery/quote',endpoint(async(req,res)=>{
     validateContext(req.body);
     const result=await createDeliveryQuote(req.body.address,await settings(),process.env.MAPBOX_ACCESS_TOKEN || '',{checkoutContext:req.body.checkoutContext,addressVersion:req.body.addressVersion,confirmedPin:req.body.confirmedPin,candidateToken:req.body.candidateToken,requestId:res.locals.requestId});

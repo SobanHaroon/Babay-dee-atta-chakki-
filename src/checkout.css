@@ -42,3 +42,14 @@
 .delivery-confirm-map img,
 .delivery-confirm-map svg,
 .delivery-confirm-map canvas { content-visibility: visible; }
+
+/* Touch-friendly one-time location sharing. */
+.location-share-button{display:flex;align-items:center;justify-content:center;gap:11px;width:100%;min-height:53px;padding:13px 18px;background:#2353b8;border:1px solid #2353b8;border-radius:10px;color:white;font-size:14px;font-weight:650;cursor:pointer}
+.location-share-button:hover{background:#173d8a}.location-share-button:disabled{opacity:.55;cursor:not-allowed}
+.location-share-button:focus-visible{outline:3px solid #e2bb61;outline-offset:3px}
+.location-sharing-hint{margin:9px 0!important;color:#566984;line-height:1.65!important}
+.location-selected{display:flex;align-items:center;gap:7px;color:#1b4e83;font-size:12px;overflow-wrap:anywhere}
+.location-accuracy{padding:9px 12px;background:#ebf4fc;border-radius:7px;color:#184b76;font-size:12px}
+.location-approximate-match{margin-bottom:14px;padding:12px;background:#fffaf0;border:1px solid #ecdcb7;border-radius:8px}
+.approximate-location>.commerce-primary{min-height:50px}
+.receipt-contact a,.order-review a{color:#2353b8;text-decoration:underline;text-underline-offset:3px;font-weight:600}

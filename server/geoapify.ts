@@ -9,7 +9,7 @@ export interface ProviderPlace {
   type:string; confidence?:number; buildingConfidence?:number; provider:string;
   houseNumber?:string; county?:string; name?:string; region?:string;
 }
-export type LookupStage = 'full'|'normalized'|'street'|'area'|'parent'|'neighborhood'|'routing'|'service-area';
+export type LookupStage = 'full'|'normalized'|'street'|'area'|'parent'|'neighborhood'|'routing'|'service-area'|'reverse';
 function diagnostic(requestId:string,stage:LookupStage,start:number,status:number,count?:number) {
   // No keys, provider URLs, search text, destination coordinates or customer data.
   if(process.env.NODE_ENV !== 'test') console.info(JSON.stringify({event:'delivery_provider',requestId,provider:'Geoapify',stage,elapsedMs:Date.now()-start,status,candidateCount:count}));
@@ -73,4 +73,17 @@ export async function geoapifyServiceArea(destination:{latitude:number;longitude
   const area=allowed.find(name=>areas.includes(normalize(name)));
   if(p.country_code.toLowerCase()!=='pk'||!area)throw new DeliveryQuoteError('We deliver in Rawalpindi and Islamabad within the configured road-distance limit. Please choose a location in these areas or store pickup.',422,'OUT_OF_AREA');
   return area;
+}
+
+/** Find a *nearby label* for an explicitly selected map point. A label is not a verified house. */
+export async function geoapifyReverseAddress(latitude:number,longitude:number,requestId:string=randomUUID()) {
+  if(!validCoordinates(latitude,longitude))throw new DeliveryQuoteError('Select a valid map location.',400,'INVALID_COORDINATES');
+  const key=process.env.GEOAPIFY_GEOCODING_KEY||process.env.GEOAPIFY_API_KEY;
+  if(!key)throw new DeliveryQuoteError('Address lookup is not configured. Your selected map pin is still usable.',503,'PROVIDER_CONFIGURATION');
+  const url=new URL('https://api.geoapify.com/v1/geocode/reverse');
+  url.search=new URLSearchParams({lat:String(latitude),lon:String(longitude),format:'json',lang:'en',limit:'1',apiKey:key}).toString();
+  const data=await providerJson(url,'reverse',requestId);
+  const place=Array.isArray(data?.results)?data.results[0]:data?.features?.[0]?.properties;
+  if(!place||typeof place.formatted!=='string'||!place.formatted.trim())throw new DeliveryQuoteError('No nearby address label was found. Your selected map pin is still usable.',422,'ADDRESS_NOT_FOUND');
+  return {success:true,address:place.formatted.trim(),city:String(place.city||place.town||place.village||''),area:String(place.suburb||place.district||''),precision:String(place.result_type||'approximate')};
 }

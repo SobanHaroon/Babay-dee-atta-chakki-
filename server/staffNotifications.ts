@@ -1,7 +1,8 @@
+import { DELIVERY_CHARGES_NOTE, hasPendingDeliveryCharges } from '../src/lib/orderWhatsApp.js';
 import { timingSafeEqual } from 'node:crypto';
 
 type Environment = Record<string, string | undefined>;
-export type OrderAlertDetails = {customer:{name:string;phone:string;email?:string;address:string};items:Array<{name:string;quantity:number;unit:string;price:number}>;subtotal:number;deliveryCharges:number;discount?:number};
+export type OrderAlertDetails = {customer:{name:string;phone:string;email?:string;address:string};items:Array<{name:string;quantity:number;unit:string;price:number}>;subtotal:number;deliveryCharges:number;deliveryChargeStatus?:'pending'|'confirmed';discount?:number};
 export type Job = {orderId:string;legacyOrderId:number;leaseToken:string;total:number;fulfillmentType:string;deliveryDate:string;deliverySlot:string;details?:OrderAlertDetails};
 export interface StaffQueue {
   claim(orderId?:string):Promise<Job|null>;
@@ -25,7 +26,7 @@ export function databaseStaffQueue(db:any):StaffQueue {
         const d=data.document;
         return {...job,details:{customer:{name:d.customer?.name,phone:d.customer?.phone,email:d.customer?.email,address:d.customer?.address},
           items:d.items?.map((i:any)=>({name:i.name,quantity:i.quantity,unit:i.unit,price:i.price})),
-          subtotal:d.subtotal,deliveryCharges:d.deliveryCharges,discount:d.discount}};
+          subtotal:d.subtotal,deliveryCharges:d.deliveryCharges,...(d.deliveryChargeStatus?{deliveryChargeStatus:d.deliveryChargeStatus}:{}),discount:d.discount}};
       } catch {
         await rpc('finish_staff_notification',{p_order_id:job.orderId,p_lease_token:job.leaseToken,p_error:'ORDER_DETAILS_UNAVAILABLE'});
         throw Error('ORDER_DETAILS_UNAVAILABLE');
@@ -53,6 +54,7 @@ export function formatStaffOrder(job:Job):string[] {
     ||![job.total,d.subtotal,d.deliveryCharges,d.discount??0].every(v=>Number.isFinite(v)&&v>=0)
     ||Math.abs(d.subtotal+d.deliveryCharges-(d.discount??0)-job.total)>.011
     ||d.items.some(i=>!i.name||!Number.isFinite(i.quantity)||i.quantity<=0||!Number.isFinite(i.price)||i.price<0))throw Error('INVALID_ORDER_DETAILS');
+  const pendingDelivery=hasPendingDeliveryCharges({fulfillmentType:job.fulfillmentType==='pickup'?'pickup':'delivery',deliveryChargeStatus:d.deliveryChargeStatus});
   const lines=[
     'Order: '+job.orderId,'Dashboard order: '+job.legacyOrderId,
     'Fulfillment: '+(job.fulfillmentType==='pickup'?'Store pickup':'Delivery'),
@@ -60,8 +62,9 @@ export function formatStaffOrder(job:Job):string[] {
     'Customer: '+plain(d.customer.name),'Phone: '+plain(d.customer.phone),'Email: '+plain(d.customer.email),
     'Address: '+plain(d.customer.address,job.fulfillmentType==='pickup'?'Store pickup — no delivery address':'Not provided'),'',
     'Items:',...d.items.map((item,index)=>(index+1)+'. '+plain(item.name)+' — '+item.quantity+' '+plain(item.unit,'unit')+' × Rs. '+money(item.price)+' = Rs. '+money(Math.round(item.quantity*item.price*100)/100)),
-    '', 'Order without delivery (subtotal): Rs. '+money(d.subtotal),'Delivery charges: Rs. '+money(d.deliveryCharges),
-    ...((d.discount??0)>0?['Discount: Rs. '+money(d.discount!)]:[]),'Order total: Rs. '+money(job.total),
+    '', 'Order without delivery (subtotal): Rs. '+money(d.subtotal),pendingDelivery?'Delivery charges: Confirmed on WhatsApp':'Delivery charges: Rs. '+money(d.deliveryCharges),
+    ...((d.discount??0)>0?['Discount: Rs. '+money(d.discount!)]:[]),(pendingDelivery?'Order total before delivery: Rs. ':'Order total: Rs. ')+money(job.total),
+    ...(pendingDelivery?[DELIVERY_CHARGES_NOTE]:[]),
   ];
   // ntfy limits UTF-8 message bodies to 4096 bytes. Never split a Unicode character or drop items.
   const parts:string[]=[];let part='',bytes=0;

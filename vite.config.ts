@@ -34,9 +34,6 @@ export default defineConfig(() => {
               if (id.includes('three') || id.includes('@react-three')) {
                 return 'vendor-three';
               }
-              if (id.includes('leaflet')) {
-                return 'vendor-leaflet';
-              }
               if (id.includes('motion') || id.includes('gsap') || id.includes('animejs')) {
                 return 'vendor-animation';
               }

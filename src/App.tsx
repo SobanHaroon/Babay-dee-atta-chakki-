@@ -1,3 +1,4 @@
+import { DELIVERY_CHARGES_NOTE, orderWhatsAppUrl } from './lib/orderWhatsApp';
 import { checkoutContext } from './lib/checkoutSession';
 import { PolicyLinks } from "./components/PolicyLinks";
 import { CheckoutConfirmation } from "./components/CheckoutConfirmation";
@@ -81,16 +82,6 @@ const SupportChat = React.lazy(() => import("./components/SupportChat"));
 const FAQSection = React.lazy(() => import("./components/FAQSection"));
 const WhyChooseUs = React.lazy(() => import("./components/WhyChooseUs"));
 
-
-export const GOOGLE_MAPS_PLATFORM_KEY =
-  (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY || "";
-
-export const STORE_EXACT_LOCATION = {
-  lat: 33.567341,
-  lng: 73.1044791,
-  address: "Main Gulraiz Phase 3 / High Court Rd, Rawalpindi",
-  name: "Babay Dee Atta Chakki (Central Depot)"
-};
 
 const DELIVERY_SLOTS_DATA = [
   { id: "slot1", name: "Morning", time: "09:00 AM - 12:00 PM", icon: "🌅" },
@@ -225,9 +216,6 @@ export default function App() {
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartBounce, setCartBounce] = useState(0);
-  const [selectedArea, setSelectedArea] = useState("Islamabad"); // default delivery town, Rawalpindi alternative
-  const [selectedSubLocation, setSelectedSubLocation] = useState<string>("Sector I-8 / I-9");
-  const [customDistanceKm, setCustomDistanceKm] = useState<number>(12);
 
   // Modals / Overlays
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -246,9 +234,6 @@ export default function App() {
 
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const [customerCoordinates, setCustomerCoordinates] = useState<{ lat: number; lng: number } | null>(null);
-  const [isDeliverable, setIsDeliverable] = useState<boolean>(true);
-  const [verifiedDeliveryCharge, setVerifiedDeliveryCharge] = useState<number | null>(null);
   const [checkoutFormData, setCheckoutFormData] = useState<CheckoutAddressData>(() => ({
     name: typeof window !== "undefined" ? localStorage.getItem("customer_name") || "" : "",
     phone: typeof window !== "undefined" ? localStorage.getItem("customer_phone") || "" : "",
@@ -256,10 +241,6 @@ export default function App() {
     address: "",
     checkoutContext: checkoutContext(),
     addressVersion: 0,
-    quoteExpiresAt: 0,
-    deliveryQuotedAddress: "",
-    deliveryQuoteToken: "",
-    matchedAddress: "",
     city: "",
     area: "",
     paymentMethod: "Cash on Delivery",
@@ -632,8 +613,8 @@ export default function App() {
       return;
     }
 
-    if (fulfillmentType !== "pickup" && (!address.trim() || (!checkoutFormData.deliveryQuoteToken || checkoutFormData.quoteExpiresAt <= Date.now()) || checkoutFormData.deliveryQuotedAddress !== address.trim() || verifiedDeliveryCharge === null || !isDeliverable || !customerCoordinates)) {
-      const message = "Calculate delivery charges for your address before continuing.";
+    if (fulfillmentType !== "pickup" && address.trim().length < 8) {
+      const message = "Please enter your complete delivery address.";
       setCheckoutError(message); toast.error(message); return;
     }
 
@@ -658,7 +639,7 @@ export default function App() {
     setCheckoutError("");
 
     const isPickupOrder = fulfillmentType === "pickup";
-    if (!isPickupOrder && (verifiedDeliveryCharge === null || !isDeliverable || (!checkoutFormData.deliveryQuoteToken || checkoutFormData.quoteExpiresAt <= Date.now()) || checkoutFormData.deliveryQuotedAddress !== checkoutFormData.address.trim())) { setIsPlacingOrder(false); setCheckoutError("Calculate delivery charges for your address before ordering."); return; }
+    if (!isPickupOrder && checkoutFormData.address.trim().length < 8) { setIsPlacingOrder(false); setCheckoutError("Please enter your complete delivery address."); return; }
     const { name, phone, email, address, city, area } = checkoutFormData;
     const finalAddress = isPickupOrder
       ? "Store Depot: Babay Dee Atta Chakki, Main Gulraiz Phase 3 / High Court Rd, Rawalpindi"
@@ -667,17 +648,12 @@ export default function App() {
     const resolvedArea = (area || "").trim();
     const finalPaymentMethod = isPickupOrder ? "Pay at Store Counter" : "Cash on Delivery";
 
-    const custLat = customerCoordinates?.lat;
-    const custLng = customerCoordinates?.lng;
-    const dist = isPickupOrder ? 0 : customDistanceKm;
-
     try {
       const payload = {
           name: name.trim(),
           phone: phone.trim(),
           email: (email || "").trim(),
           address: finalAddress,
-          deliveryQuoteToken: checkoutFormData.deliveryQuoteToken,
           city: resolvedCity,
           area: resolvedArea,
           subLocation: resolvedArea,
@@ -689,12 +665,6 @@ export default function App() {
           pickupNotes: (checkoutFormData as any).pickupNotes || "",
           notes: (checkoutFormData as any).notes || "",
           riderTip: (checkoutFormData as any).riderTip || 0,
-          distanceKm: dist,
-          latitude: custLat,
-          longitude: custLng,
-          customerLatitude: custLat,
-          customerLongitude: custLng,
-          customerCoordinates: { lat: custLat, lng: custLng },
           deliveryDate: checkoutFormData.deliveryDate,
           deliverySlot: checkoutFormData.deliverySlot
         };
@@ -708,13 +678,12 @@ export default function App() {
       });
 
       const data = await res.json();
-      if (res.ok && data.success) {
-        const orderObj = data.order || {};
+      if (res.ok && data.success && data.order?.id && data.order?.customer) {
+        const orderObj = data.order;
         orderObj.orderAccessToken = data.orderAccessToken || orderObj.orderAccessToken;
         rememberOrderAccess(orderObj.id, orderObj.orderAccessToken || "");
         checkoutAttempt.current = null;
-        setCheckoutFormData(previous => ({...previous, checkoutContext: checkoutContext(true), addressVersion: 0, quoteExpiresAt: 0, deliveryQuoteToken: "", deliveryQuotedAddress: ""}));
-        setVerifiedDeliveryCharge(null); setIsDeliverable(false);
+        setCheckoutFormData(previous => ({...previous, checkoutContext: checkoutContext(true), addressVersion: 0}));
         if (data.emailStatus) {
           orderObj.emailStatus = data.emailStatus;
         }
@@ -726,13 +695,18 @@ export default function App() {
         if (data.emailStatus?.delivered) {
           toast.success(`Receipt sent to ${data.emailStatus.recipient || email}!`);
         }
-        if (typeof window !== "undefined") {
-          sessionStorage.setItem("last_tracking_id", data.orderId || data.order?.id);
-        }
+        // Persist the cleared basket and tracking code before leaving for WhatsApp.
+        // Storage restrictions must not turn a saved order into a checkout failure.
+        try {
+          localStorage.removeItem("babay_dee_cart");
+          sessionStorage.setItem("last_tracking_id", orderObj.id);
+        } catch { /* The confirmation page still contains the saved order. */ }
+        try { window.location.assign(orderWhatsAppUrl(orderObj)); }
+        catch { toast.info("Your order is saved. Use the WhatsApp link below to contact the store."); }
       } else {
         const errMsg = data.error || "Failed to process checkout transaction. Try again.";
         setCheckoutError(errMsg);
-        if (res.status === 409) {setShowPreCheckoutModal(false);setVerifiedDeliveryCharge(null);setIsDeliverable(false);setCheckoutFormData(prev => ({...prev,deliveryQuoteToken:"",deliveryQuotedAddress:""}));}
+        if (res.status === 409) setShowPreCheckoutModal(false);
         toast.error(errMsg);
       }
     } catch (err) {
@@ -1340,7 +1314,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Right Column: Premium Leaflet Embed (7 cols) */}
+              {/* Right Column: Store directions (7 cols) */}
               <div className="col-span-1 md:col-span-7 bg-white p-4 rounded-3xl border border-slate-100 shadow-xs h-[420px] overflow-hidden flex flex-col justify-between">
                 <div className="pb-3 border-b border-slate-50 flex justify-between items-center text-xs">
                   <span className="font-bold text-slate-700">Digital Map Guidance</span>
@@ -1399,7 +1373,7 @@ export default function App() {
                 Checkout
               </h1>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Enter your details, calculate delivery, and review your fresh essentials.
+                Enter your details, add your address, and review your fresh essentials.
               </p>
             </div>
 
@@ -1435,18 +1409,6 @@ export default function App() {
                     setCheckoutFormData={setCheckoutFormData}
                     checkoutError={checkoutError}
                     setCheckoutError={setCheckoutError}
-                    selectedArea={selectedArea}
-                    setSelectedArea={setSelectedArea}
-                    selectedSubLocation={selectedSubLocation}
-                    setSelectedSubLocation={setSelectedSubLocation}
-                    customDistanceKm={customDistanceKm}
-                    setCustomDistanceKm={setCustomDistanceKm}
-                    customerCoordinates={customerCoordinates}
-                    setCustomerCoordinates={setCustomerCoordinates}
-                    isDeliverable={isDeliverable}
-                    setIsDeliverable={setIsDeliverable}
-                    verifiedDeliveryCharge={verifiedDeliveryCharge}
-                    setVerifiedDeliveryCharge={setVerifiedDeliveryCharge}
                     fulfillmentType={fulfillmentType}
                     setFulfillmentType={setFulfillmentType}
                     handleCheckoutSubmit={handleCheckoutSubmit}
@@ -1460,8 +1422,8 @@ export default function App() {
                 <aside className="lg:col-span-4 receipt-panel checkout-basket" aria-label="Order summary">
                   <h3>Your basket <span className="float-right">{cartItems.length} items</span></h3>
                   <ul className="receipt-items">{cartItems.map(item=><li key={item.id}><div><strong>{productLabel(item)}</strong><small>{item.quantity} {item.unit}</small></div><span>{formatRupees(item.price*item.quantity)}</span></li>)}</ul>
-                  <dl className="receipt-totals"><div><dt>Subtotal</dt><dd>{formatRupees(cartItems.reduce((sum,item)=>sum+item.price*item.quantity,0))}</dd></div><div><dt>Delivery{fulfillmentType !== "pickup" && verifiedDeliveryCharge !== null && <small className="block mt-1">{customDistanceKm.toFixed(2)} km {["area", "sector", "phase", "neighborhood"].includes(checkoutFormData.locationPrecision || "") ? "to matched " + (checkoutFormData.locationPrecision === "neighborhood" ? "neighbourhood" : checkoutFormData.locationPrecision) : "by road"}</small>}</dt><dd>{fulfillmentType === "pickup" ? "Free pickup" : verifiedDeliveryCharge !== null ? formatRupees(verifiedDeliveryCharge) : "Not calculated yet"}</dd></div><div className="receipt-grand-total"><dt>Total</dt><dd>{fulfillmentType !== "pickup" && verifiedDeliveryCharge === null ? "Awaiting delivery charge" : formatRupees(cartItems.reduce((sum,item)=>sum+item.price*item.quantity,0)+(fulfillmentType === "pickup" ? 0 : verifiedDeliveryCharge ?? 0))}</dd></div></dl>
-                  <p>{fulfillmentType === "pickup" ? "Collect from our store on Main Gulraiz Phase 3 / High Court Road, Rawalpindi." : "Your delivery charge is calculated from the road distance to the address you enter. Pay when your order arrives."}</p>
+                  <dl className="receipt-totals"><div><dt>Subtotal</dt><dd>{formatRupees(cartItems.reduce((sum,item)=>sum+item.price*item.quantity,0))}</dd></div><div><dt>Delivery</dt><dd>{fulfillmentType === "pickup" ? "Free pickup" : "Confirmed on WhatsApp"}</dd></div><div className="receipt-grand-total"><dt>{fulfillmentType === "pickup" ? "Total" : "Total before delivery"}</dt><dd>{formatRupees(cartItems.reduce((sum,item)=>sum+item.price*item.quantity,0))}</dd></div></dl>
+                  <p>{fulfillmentType === "pickup" ? "Collect from our store on Main Gulraiz Phase 3 / High Court Road, Rawalpindi." : DELIVERY_CHARGES_NOTE}</p>
                 </aside>
               </div>
             )}
@@ -1478,20 +1440,11 @@ export default function App() {
         cartItems={cartItems}
         fulfillmentType={fulfillmentType}
         onFulfillmentTypeChange={setFulfillmentType}
-        selectedArea={selectedArea}
-        selectedSubLocation={selectedSubLocation}
-        onSubLocationChange={(subLoc) => setSelectedSubLocation(subLoc)}
-        customDistanceKm={customDistanceKm}
-        onCustomDistanceChange={(dist) => setCustomDistanceKm(dist)}
         onClose={() => setIsCartOpen(false)}
         onUpdateQuantity={handleUpdateCartQty}
         onRemoveItem={handleRemoveCartItem}
         onUndoRemove={handleUndoRemoveItem}
         lastRemovedItem={lastRemovedItem}
-        onAreaChange={(area) => {
-          setSelectedArea(area);
-          setCheckoutFormData((prev) => ({ ...prev, area }));
-        }}
         onCheckout={() => {
           setIsCartOpen(false);
           setCheckoutActive(true);
@@ -1533,9 +1486,9 @@ export default function App() {
           fulfillmentType,deliveryDate:checkoutFormData.deliveryDate,deliverySlot:checkoutFormData.deliverySlot,
           paymentMethod:fulfillmentType === "pickup" ? "Pay at the store" : "Cash on delivery",
           subtotal:cartItems.reduce((sum,item)=>sum+item.price*item.quantity,0),
-          deliveryCharges:fulfillmentType === "pickup" ? 0 : verifiedDeliveryCharge ?? 0,
-          total:cartItems.reduce((sum,item)=>sum+item.price*item.quantity,0)+(fulfillmentType === "pickup" ? 0 : verifiedDeliveryCharge ?? 0),
-          deliveryDetails:{distanceKm:customDistanceKm,locationPrecision:checkoutFormData.locationPrecision},status:"Review",statusHistory:[],createdAt:new Date().toISOString()}}
+          deliveryCharges:0, deliveryChargeStatus:fulfillmentType === "pickup" ? "confirmed" : "pending",
+          total:cartItems.reduce((sum,item)=>sum+item.price*item.quantity,0),
+          status:"Review",statusHistory:[],createdAt:new Date().toISOString()}}
       />}
 
       {/* 5. Direct Product Peak Details Overlay */}

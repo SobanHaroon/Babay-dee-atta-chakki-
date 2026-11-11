@@ -1,3 +1,4 @@
+import { DELIVERY_CHARGES_NOTE, hasPendingDeliveryCharges } from './orderWhatsApp.js';
 import { orderTrackingUrl } from "./orderAccess.js";
 function escapeReceiptValues(value: any): any {
   if (typeof value === "string") return value.replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]!));
@@ -18,6 +19,7 @@ export function generateOrderReceiptHtml(order: any, appUrl: string = ""): strin
   order = escapeReceiptValues(order);
   const orderId = order.id || "BDEC-ORDER";
   const isPickup = order.fulfillmentType === "pickup";
+  const pendingDelivery = hasPendingDeliveryCharges(order);
   const customer = order.customer || {};
   const deliveryDetails = order.deliveryDetails || {};
   const items: any[] = Array.isArray(order.items) ? order.items : [];
@@ -220,7 +222,7 @@ export function generateOrderReceiptHtml(order: any, appUrl: string = ""): strin
               ${isPickup ? "Store Self-Pickup:" : "Delivery Charges:"}
             </td>
             <td style="padding: 6px 0; font-size: 13px; text-align: right; font-weight: 700; font-family: monospace; color: ${isPickup ? '#059669' : '#1c1917'};">
-              ${isPickup ? "FREE (Rs. 0)" : formatRs(deliveryCharges)}
+              ${isPickup ? "FREE (Rs. 0)" : pendingDelivery ? "Confirmed on WhatsApp" : formatRs(deliveryCharges)}
             </td>
           </tr>
           ${discount > 0 ? `
@@ -233,12 +235,13 @@ export function generateOrderReceiptHtml(order: any, appUrl: string = ""): strin
           ` : ''}
           <tr style="border-top: 2px dashed #cbd5e1;">
             <td style="padding: 12px 0 0 0; font-size: 15px; font-weight: 800; color: #1c1917;">
-              Grand Total Payable:
+              ${pendingDelivery ? "Total Before Delivery:" : "Grand Total Payable:"}
             </td>
             <td style="padding: 12px 0 0 0; font-size: 20px; text-align: right; font-weight: 900; color: #b45309; font-family: monospace;">
               ${formatRs(total)}
             </td>
           </tr>
+          ${pendingDelivery ? `<tr><td colspan="2" style="padding-top: 14px; font-size: 12px; line-height: 1.6; color: #57534e;">${DELIVERY_CHARGES_NOTE}</td></tr>` : ''}
         </table>
       </td>
     </tr>
@@ -251,7 +254,7 @@ export function generateOrderReceiptHtml(order: any, appUrl: string = ""): strin
             Follow Your Milling &amp; Rider Journey Live
           </div>
           <div style="font-size: 12px; color: #a16207; margin-bottom: 16px;">
-            Track cold-stone grinding, quality packaging, and real-time rider GPS coordinates.
+            Track cold-stone grinding, quality packaging, and delivery status updates.
           </div>
           <a href="${trackingLink}" style="display: inline-block; background-color: #2b3316; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; padding: 12px 28px; border-radius: 8px; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(43, 51, 22, 0.3);">
             🌾 Track Order Status Live →
@@ -290,6 +293,7 @@ export function generateOrderReceiptHtml(order: any, appUrl: string = ""): strin
 export function generateOrderReceiptPlainText(order: any): string {
   const orderId = order.id || "BDEC-ORDER";
   const isPickup = order.fulfillmentType === "pickup";
+  const pendingDelivery = hasPendingDeliveryCharges(order);
   const customer = order.customer || {};
   const deliveryDetails = order.deliveryDetails || {};
   const items: any[] = Array.isArray(order.items) ? order.items : [];
@@ -333,9 +337,10 @@ ${itemsList || "• Fresh Atta / Chakki Items"}
 FINANCIAL SUMMARY:
 ----------------------------------------
 Sourced Subtotal:   Rs. ${subtotal}
-Delivery Charges:   ${isPickup ? "FREE (Rs. 0)" : "Rs. " + deliveryCharges}
+Delivery Charges:   ${isPickup ? "FREE (Rs. 0)" : pendingDelivery ? "Confirmed on WhatsApp" : "Rs. " + deliveryCharges}
 ----------------------------------------
-GRAND TOTAL:        Rs. ${total}
+${pendingDelivery ? "TOTAL BEFORE DELIVERY:" : "GRAND TOTAL:"} Rs. ${total}
+${pendingDelivery ? DELIVERY_CHARGES_NOTE : ""}
 ========================================
 
 Helpline: 0321-5010846 | orders@babaydeechakki.com

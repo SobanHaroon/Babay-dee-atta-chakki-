@@ -1,3 +1,4 @@
+import { DELIVERY_CHARGES_NOTE, hasPendingDeliveryCharges } from '../src/lib/orderWhatsApp.js';
 import twilio from "twilio";
 
 const DEFAULT_SMSPK_SENDER_ID = "BabayDee";
@@ -306,7 +307,8 @@ export function buildOrderConfirmationSMSBody(order: any): string {
   return `🌾 Babay Dee Atta Chakki\n` +
     `Thank you, ${customerName}!\n` +
     `Your Order #${orderId} is confirmed.\n` +
-    `• Total: Rs. ${total} (${paymentMethod})\n` +
+    `• ${hasPendingDeliveryCharges(order) ? "Total before delivery" : "Total"}: Rs. ${total} (${paymentMethod})\n` +
+    (hasPendingDeliveryCharges(order) ? DELIVERY_CHARGES_NOTE + "\n" : "") +
     `• Items: ${itemsText}\n` +
     `• Delivery: ${area}\n` +
     `Fresh stone-milling in progress.\n` +

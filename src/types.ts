@@ -106,6 +106,7 @@ export interface Order {
   paymentMethod: string;
   subtotal: number;
   deliveryCharges: number;
+  deliveryChargeStatus?: 'pending' | 'confirmed';
   discount?: number;
   total: number;
   fulfillmentType?: "delivery" | "pickup";

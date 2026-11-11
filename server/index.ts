@@ -3,28 +3,24 @@ import express from 'express';
 import {databaseStaffQueue, dispatchStaffNotification, validWorkerAuthorization} from './staffNotifications.js';
 import { databaseClients } from './database.js';
 import { createCatalogLoader } from './catalogRepository.js';
-import { createDeliveryQuote, verifyDeliveryQuote, DeliveryQuoteError } from './addressDelivery.js';
-import { getDeliverySettings } from './deliverySettings.js';
 import { installSecurity, databaseRateStore } from './security.js';
-import { authorizeOrder, orderAccessToken, checkout, CommerceError, databaseCommerceRepository, parseReview, validateContext, type CommerceRepository } from './commerce.js';
+import { authorizeOrder, orderAccessToken, checkout, CommerceError, databaseCommerceRepository, parseReview, type CommerceRepository } from './commerce.js';
 import { DEFAULT_CATEGORIES } from '../src/types.js';
-import { INITIAL_DELIVERY_AREAS } from '../src/deliveryData.js';
 import { generateOrderReceiptHtml } from '../src/lib/orderReceipt.js';
 
 const {privileged:db,catalog:catalogDb}=databaseClients();
 const catalog=createCatalogLoader(catalogDb);
 const notificationsEnabled = () => process.env.APP_ENV === 'production' && process.env.ENABLE_CUSTOMER_NOTIFICATIONS === 'true' && (!process.env.VERCEL || process.env.VERCEL_ENV === 'production');
-export function createApplication(overrides: { repository?:CommerceRepository; catalog?:()=>Promise<any[]>; settings?:()=>Promise<any>; rateStore?:any; production?:boolean; quoteVerifier?:any; sendReceipt?:(order:any)=>Promise<any>; staffDispatch?:(orderId?:string,requestId?:string)=>Promise<string> } = {}) {
+export function createApplication(overrides: { repository?:CommerceRepository; catalog?:()=>Promise<any[]>; rateStore?:any; production?:boolean; sendReceipt?:(order:any)=>Promise<any>; staffDispatch?:(orderId?:string,requestId?:string)=>Promise<string> } = {}) {
   const app = express(), repository = overrides.repository || databaseCommerceRepository(db), loadCatalog = overrides.catalog || catalog;
   // Injected repositories never contact the live notification queue during tests.
   const staffDispatch=overrides.staffDispatch || (overrides.repository ? async()=> 'disabled' : (orderId?:string,requestId?:string)=>dispatchStaffNotification(databaseStaffQueue(db),{orderId,requestId}));
-  const settings = overrides.settings || (()=>getDeliverySettings(db));
   const production = overrides.production ?? process.env.NODE_ENV === 'production';
   installSecurity(app,{production,rateStore:overrides.rateStore || (production ? databaseRateStore(db) : undefined)});
   app.use(express.json({limit:'32kb',strict:true}));
   app.use((req,res,next)=>{ if(req.method==='POST' && (!req.body || Array.isArray(req.body) || typeof req.body!=='object'))return res.status(400).json({error:'Send a JSON object.'}); next(); });
   const fail = (res:express.Response,error:unknown) => {
-    const known = error instanceof CommerceError || error instanceof DeliveryQuoteError;
+    const known = error instanceof CommerceError;
     const status = known ? error.status : 503;
     console.warn(JSON.stringify({event:'api_request_failed',requestId:res.locals.requestId,status,code:known ? (error as any).code : 'UPSTREAM_UNAVAILABLE'}));
     return res.status(status).json({success:false,error:known ? error.message : 'Service temporarily unavailable. Please try again.',code:known ? (error as any).code : 'UPSTREAM_UNAVAILABLE',requestId:res.locals.requestId});
@@ -43,15 +39,8 @@ export function createApplication(overrides: { repository?:CommerceRepository; c
     res.json(products);
   }));
   app.get('/api/product/:id',endpoint(async(req,res)=>{const product=(await loadCatalog()).find(p=>p.id===req.params.id);return product?res.json(product):res.status(404).json({error:'Product not found.'});}));
-  app.get('/api/delivery/settings',endpoint(async(_req,res)=>{res.json({success:true,data:await settings()});}));
-  app.get('/api/delivery-areas',(_req,res)=>res.json({success:true,count:INITIAL_DELIVERY_AREAS.length,data:INITIAL_DELIVERY_AREAS}));
-  app.post('/api/delivery/quote',endpoint(async(req,res)=>{
-    validateContext(req.body);
-    const result=await createDeliveryQuote(req.body.address,await settings(),process.env.MAPBOX_ACCESS_TOKEN || '',{checkoutContext:req.body.checkoutContext,addressVersion:req.body.addressVersion,confirmedPin:req.body.confirmedPin,candidateToken:req.body.candidateToken,requestId:res.locals.requestId});
-    res.json(result);
-  }));
   app.post('/api/checkout',endpoint(async(req,res)=>{
-    const result=await checkout(req.body,req.get('Idempotency-Key'),{repository,catalog:loadCatalog,quote:async(input)=> overrides.quoteVerifier ? overrides.quoteVerifier(input) : verifyDeliveryQuote(input.quoteToken,input.address,await settings(),{checkoutContext:input.checkoutContext,addressVersion:input.addressVersion})});
+    const result=await checkout(req.body,req.get('Idempotency-Key'),{repository,catalog:loadCatalog});
     // Queue claims make retries safe. Staff alerts are independently opted in.
     try {await staffDispatch(result.orderId,res.locals.requestId);} catch {console.warn(JSON.stringify({event:'staff_notification_deferred',requestId:res.locals.requestId}));}
     // Customer messages remain disabled in development/preview. Persisted retries never resend.
@@ -98,5 +87,4 @@ export function createApplication(overrides: { repository?:CommerceRepository; c
   app.use((error:any,_req:express.Request,res:express.Response,_next:express.NextFunction)=>res.status(error?.status===413?413:400).json({error:error?.status===413?'Request body is too large.':'Invalid JSON request body.',requestId:res.locals.requestId}));
   return app;
 }
-export const getSupabaseDeliverySettings = () => getDeliverySettings(db);
 export default createApplication();

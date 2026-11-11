@@ -48,7 +48,7 @@ test('real PostgreSQL migrations, checkout persistence, atomic stock, retries an
    rpc(name:string,args:any){return {async abortSignal(){assert.equal(name,'place_store_order');try{return {data:await scalar('select place_store_order($1::jsonb)',[JSON.stringify(args.p_order)]),error:null};}catch(e:any){return {data:null,error:{code:e.code,message:e.message}};}}};}
   };
   const repository=databaseCommerceRepository(client);
-  const deps={repository,catalog:async()=>normalizeCatalog((await query('select * from products')).rows),quote:async()=>{throw Error('Pickup fixture must not request a route');}};
+  const deps={repository,catalog:async()=>normalizeCatalog((await query('select * from products')).rows)};
   const input=()=>({checkoutContext:randomUUID(),addressVersion:1,fulfillmentType:'pickup',name:'Synthetic Customer',phone:'03000000000',deliveryDate:upcomingDeliveryDays()[0].value,deliverySlot:'Morning',cartItems:[{id:'1',quantity:1.5,price:.01}],total:.01,discount:500,paymentStatus:'paid'});
   const body=input();let order:any;
   await db.exec('set role service_role');
@@ -153,6 +153,20 @@ test('real PostgreSQL migrations, checkout persistence, atomic stock, retries an
    assert.equal(await scalar('select count(*)::int from staff_notification_outbox'),2);
    assert.equal(await scalar('select count(*)::int from secure_orders'),2);
    assert.equal(await scalar('select stock_quantity::float8 from products where id=1'),9998.5);
+  });
+  await t.test('delivery orders persist pending charges, full addresses and dashboard rows without coordinates',async()=>{
+   const address='House 14, Street 5 & Flat 2, Gulraiz راولپنڈی';
+   const delivery={...input(),fulfillmentType:'delivery',address};
+   const before=await scalar('select stock_quantity::float8 from products where id=1') as number;
+   const saved=await checkout(delivery,delivery.checkoutContext,deps);
+   const persisted=(await repository.findOrder(saved.orderId))!;
+   assert.equal(persisted.document.deliveryChargeStatus,'pending');assert.equal(persisted.document.deliveryCharges,0);assert.equal(persisted.document.total,270);
+   assert.equal(persisted.document.customer.address,address);
+   const legacy=(await query('select o.* from orders o join order_dashboard_links l on o.id=l.legacy_row_id where l.secure_order_id=$1',[saved.orderId])).rows[0];
+   assert.ok(legacy['customer address'].startsWith(address));assert.equal(legacy['delivery latitude'],null);assert.equal(legacy['delivery longitude'],null);
+   assert.equal(Number(legacy['Order pricing']),270);assert.equal(Number(legacy['Delivery charges']),0);
+   const retry=await checkout(delivery,delivery.checkoutContext,deps);assert.equal(retry.orderId,saved.orderId);assert.equal(retry.created,false);
+   assert.equal(await scalar('select stock_quantity::float8 from products where id=1'),before-1.5);
   });
   await t.test('anonymous and authenticated roles cannot read customer data, mutate catalog or call order RPCs',async()=>{
    for(const role of ['anon','authenticated']){

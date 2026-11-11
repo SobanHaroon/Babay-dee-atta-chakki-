@@ -1,4 +1,4 @@
-﻿import 'dotenv/config';
+import 'dotenv/config';
 import {databaseClients} from '../server/database.js';
 
 // Read-only schema probes: limit(0) never returns product/customer/order records.
@@ -15,7 +15,7 @@ const checks=await Promise.all([
  const {status,error}=await db.from(table).select(columns).limit(0).abortSignal(AbortSignal.timeout(10000));
  return {table,ready:!error,status,code:error?.code&&/^[A-Z0-9]+$/.test(error.code)?error.code:null};
 }));
-const secrets=['ORDER_ACCESS_SECRET','DELIVERY_QUOTE_SECRET','RATE_LIMIT_SECRET'].map(name=>({name,configured:(process.env[name]?.length||0)>=32}));
+const secrets=['ORDER_ACCESS_SECRET','RATE_LIMIT_SECRET'].map(name=>({name,configured:(process.env[name]?.length||0)>=32}));
 const ready=checks.every(c=>c.ready)&&secrets.every(c=>c.configured);
-console.log(JSON.stringify({schemaAndSigningReady:ready,checks,secrets,note:'Read-only checks. Does not create an order or verify hosted RPC permissions, route providers or notification delivery.'},null,2));
+console.log(JSON.stringify({schemaAndSigningReady:ready,checks,secrets,note:'Read-only checks. Does not create an order or verify hosted RPC permissions, notification delivery.'},null,2));
 if(!ready)process.exitCode=1;

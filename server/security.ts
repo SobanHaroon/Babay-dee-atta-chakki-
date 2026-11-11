@@ -25,7 +25,7 @@ export function databaseRateStore(db: any): RateStore {
 export const productionCsp = [
   "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com data:", "img-src 'self' data: blob: https:",
-  "connect-src 'self'", "worker-src 'self' blob:", "frame-src 'self' blob: https://www.google.com https://maps.google.com",
+  "connect-src 'self'", "worker-src 'self' blob:", "frame-src 'self' blob:",
   "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'none'",
 ].join('; ');
 export function requestIp(req: Request) {
@@ -46,7 +46,7 @@ export function installSecurity(app: Express, options: { rateStore?: RateStore; 
     res.setHeader('X-Request-ID', requestId);
     res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     if (production) { res.setHeader('Content-Security-Policy', productionCsp); res.setHeader('Strict-Transport-Security', 'max-age=31536000'); }
     if (!req.path.startsWith('/api/')) return next();
     res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Robots-Tag', 'noindex, nofollow');
@@ -62,8 +62,8 @@ export function installSecurity(app: Express, options: { rateStore?: RateStore; 
     if (!['GET', 'HEAD', 'POST'].includes(req.method)) return res.status(405).json({ error: 'Method not allowed.' });
     if (req.method === 'POST' && !req.is('application/json')) return res.status(415).json({ error: 'Send a JSON request body.' });
     if (req.get('sec-fetch-site') === 'cross-site' && req.method === 'POST') return res.status(403).json({ error: 'Cross-site request rejected.' });
-    const bucket = req.path.startsWith('/api/delivery/') && req.method === 'POST' ? 'quote' : req.path === '/api/checkout' ? 'checkout' : req.path.includes('send-receipt') ? 'receipt' : req.path.includes('reviews') || req.path.includes('feedback') ? (req.method === 'POST' ? 'review' : 'public') : req.path.startsWith('/api/order/') ? 'tracking' : 'public';
-    const limit = ({ quote: 12, checkout: 8, receipt: 3, review: 3, tracking: 40, public: 120 })[bucket];
+    const bucket = req.path === '/api/checkout' ? 'checkout' : req.path.includes('send-receipt') ? 'receipt' : req.path.includes('reviews') || req.path.includes('feedback') ? (req.method === 'POST' ? 'review' : 'public') : req.path.startsWith('/api/order/') ? 'tracking' : 'public';
+    const limit = ({ checkout: 8, receipt: 3, review: 3, tracking: 40, public: 120 })[bucket];
     try {
       const catalogRead=['GET','HEAD'].includes(req.method)&&(/^\/api\/(?:health|categories|products|featured-products|popular-products)$/.test(req.path)||/^\/api\/product\/[^/]+$/.test(req.path));
       const secret = catalogRead ? catalogRateSecret : process.env.RATE_LIMIT_SECRET || process.env.ORDER_ACCESS_SECRET;

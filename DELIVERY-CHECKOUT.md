@@ -1,11 +1,15 @@
-﻿# Delivery checkout
+# Delivery checkout
 
-Current implementation and verification: [5 October audit](docs/AUDIT-2026-10-05.md).
+Customers enter their details and a complete delivery address, choose a date/time, and review the order. No map, location permission, route lookup or signed delivery quote is required. Store pickup still has no delivery charge.
 
-Enter the complete address and calculate. Geoapify attempts the full address, then bounded street/sector/phase/neighbourhood fallbacks. Original delivery instructions are preserved. Approximate matches display the matched area and require map-pin confirmation; road distance and fees are then calculated server-side. City-only results do not become a delivery quote.
+Confirm & place order first calls `/api/checkout`. The server validates the details, prices items from the trusted catalog and uses the existing `place_store_order` transaction to save the order, update the dashboard table, deduct inventory and queue staff notifications. Retries retain the same checkout context and idempotency key, preventing duplicate orders.
 
-Text/pin edits invalidate quotes. Checkout requires a valid ten-minute signed quote bound to its context and address version. Routing failures never substitute straight-line distance. Store coordinates, service bounds and pricing must come from verified server configuration. The existing minimum and rounding policy remain unchanged.
+New delivery orders save `deliveryChargeStatus: "pending"` in the existing order JSON. `deliveryCharges` stays numerically zero for compatibility with the existing database; this means **not yet included**, not free delivery. `total` is the item total. No database migration is needed. Existing orders with recorded delivery charges retain their original invoice totals.
 
-Geoapify geocoding/routing credentials are server-only. A separately restricted public Mapbox token displays pin-adjustment map tiles. Configure `.env.example`; provider keys are never used as signing secrets. See the audit report for required migrations, owner configuration, tests and remaining limitations.
+Checkout, receipts, tracking summaries and enabled order notifications explain that delivery charges are calculated separately and the final total including delivery is shared through WhatsApp.
 
-Run `npm test`, `npm run lint`, `npm run build`, and `npm run test:checkout`. The browser harness intercepts API calls with synthetic data; it does not create production orders. `scripts/audit-delivery-live.ts` is an optional paid-provider coverage check using synthetic addresses, not verified doorstep locations.
+Only after a successful save, the browser opens `https://wa.me/923215010846` with a URL-encoded message containing the saved tracking ID, customer name, address and contact number. The customer presses Send in WhatsApp. Failed saves retain the basket and do not redirect. The success page also includes a WhatsApp link for retrying the handoff.
+
+Map components, providers, quote endpoints and related dependencies have been removed. Store direction links on the contact page remain ordinary external links. Configuration is documented in `.env.example`.
+
+Run `npm test`, `npm run lint`, `npm run build`, `npm run test:runtime` and `npm run test:checkout`. Database tests use local PostgreSQL-compatible PGlite. Browser checks use synthetic API responses and intercept WhatsApp navigation; they do not create live orders or send messages. Set `CHROME_BIN` if Chromium is not on PATH.

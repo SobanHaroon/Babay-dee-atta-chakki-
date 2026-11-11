@@ -19,8 +19,7 @@ View product details and pricing
 Add products to their cart
 Place Cash on Delivery orders
 Provide their delivery information
-Select their delivery location
-Calculate delivery charges
+Continue to WhatsApp with saved order details
 Track their orders
 Receive order confirmation and notifications
 
@@ -41,12 +40,9 @@ Delivery address collection
 Order placement
 Order tracking
 📍 Location & Delivery
-Interactive map integration
-Customer location selection
-Latitude and longitude storage
-Distance calculation
-Delivery-area management
-Automatic delivery charge calculation
+Complete delivery address entry
+Delivery charges confirmed separately through WhatsApp
+Order saved before WhatsApp opens
 Support for Rawalpindi and Islamabad delivery
 📦 Order Management
 
@@ -65,12 +61,11 @@ Customer name
 Phone number
 Email
 Delivery address
-Location coordinates
 Ordered products
 Quantities
 Subtotal
-Delivery charges
-Total amount
+Delivery charge status
+Item total (delivery confirmed separately)
 Order status
 👨‍💼 Admin Dashboard
 
@@ -118,7 +113,6 @@ Supabase
 PostgreSQL
 Supabase JavaScript Client
 APIs & Services
-Google Maps Platform
 Google Gemini AI
 ntfy
 📂 Project Structure
@@ -147,7 +141,6 @@ Node.js 18+
 npm
 A Supabase project
 Required API credentials
-Google Maps API access if map functionality is enabled
 Gemini API key if AI functionality is enabled
 🔧 Installation
 1. Clone the repository
@@ -178,8 +171,6 @@ SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 SUPABASE_SECRET_KEY=your_supabase_secret_key
 SUPABASE_JWKS_URL=your_supabase_jwks_url
 
-GOOGLE_MAPS_PLATFORM_KEY=your_google_maps_key
-GOOGLE_MAPS_API_KEY=your_google_maps_key
 
 Never commit real API keys, database secrets, or private credentials to GitHub.
 
@@ -225,20 +216,11 @@ The website is designed around local delivery in:
 Rawalpindi
 Islamabad
 
-The delivery system can use the customer's selected coordinates to determine the distance and calculate the applicable delivery charges.
+Customers enter their complete address and proceed directly to review. Checkout saves the order and inventory changes to the existing database, then opens the store's WhatsApp number with the saved tracking ID, customer name, address and phone number. The customer sends the prepared message in WhatsApp.
 
-🗺️ Maps Integration
+Delivery charges are calculated separately by the store. Checkout and invoices show the item total before delivery and explain that the final total including delivery will be shared through WhatsApp. Store pickup remains free. No map API credentials are required.
 
-Google Maps services are used for location-related functionality such as:
-
-Interactive maps
-Location selection
-Places/autocomplete
-Route calculation
-Driving distance
-Delivery charge calculation
-
-API keys should be restricted to the required APIs and appropriate domains before deploying the application.
+See [Delivery checkout](DELIVERY-CHECKOUT.md) for persistence and verification details.
 
 🔐 Security
 
@@ -247,7 +229,6 @@ For production deployments:
 Never expose Supabase secret/service credentials in frontend code.
 Never commit .env files.
 Keep API keys in environment variables.
-Restrict Google Maps API keys by API and application.
 Use Supabase Row Level Security where appropriate.
 Validate customer input on both client and server.
 Validate order totals on the server.
@@ -300,7 +281,6 @@ Before deployment:
 
 Configure production environment variables.
 Configure the Supabase project.
-Configure Google Maps APIs.
 Configure Gemini API access if required.
 Configure ntfy notifications.
 Restrict production API keys.

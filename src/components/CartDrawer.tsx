@@ -1,3 +1,4 @@
+import { DELIVERY_CHARGES_NOTE } from '../lib/orderWhatsApp';
 import { productLabel } from "../lib/catalogPresentation";
 import { motion, AnimatePresence } from "motion/react";
 import { CartItem } from "../types";
@@ -13,17 +14,11 @@ interface CartDrawerProps {
   cartItems: CartItem[];
   fulfillmentType?: "delivery" | "pickup";
   onFulfillmentTypeChange?: (type: "delivery" | "pickup") => void;
-  selectedArea: string;
-  selectedSubLocation: string;
-  onSubLocationChange: (subLoc: string) => void;
-  customDistanceKm: number;
-  onCustomDistanceChange: (dist: number) => void;
   onClose: () => void;
   onUpdateQuantity: (id: string, q: number) => void;
   onRemoveItem: (id: string) => void;
   onUndoRemove?: () => void;
   lastRemovedItem?: CartItem | null;
-  onAreaChange: (area: string) => void;
   onCheckout: () => void;
 }
 
@@ -32,17 +27,11 @@ export function CartDrawer({
   cartItems,
   fulfillmentType = "delivery",
   onFulfillmentTypeChange,
-  selectedArea,
-  selectedSubLocation,
-  onSubLocationChange,
-  customDistanceKm,
-  onCustomDistanceChange,
   onClose,
   onUpdateQuantity,
   onRemoveItem,
   onUndoRemove,
   lastRemovedItem,
-  onAreaChange,
   onCheckout,
 }: CartDrawerProps) {
   useDialogFocus(isOpen, '#cart-drawer-container', onClose);
@@ -234,11 +223,11 @@ export function CartDrawer({
                             <span>Direct Depot Delivery</span>
                           </div>
                           <p className="text-[11px] text-slate-600 leading-relaxed font-normal">
-                            Enter your complete address at checkout to calculate delivery charges from the road distance to our store.
+                            {DELIVERY_CHARGES_NOTE}
                           </p>
                           <div className="flex items-center gap-1.5 text-[10.5px] font-semibold text-emerald-800 bg-emerald-100/70 px-2.5 py-1 rounded-lg">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                            <span>See your delivery charge before placing an order</span>
+                            <span>Final total shared through WhatsApp</span>
                           </div>
                         </div>
                       )}
@@ -264,14 +253,14 @@ export function CartDrawer({
                         </span>
                       ) : (
                         <span className="font-medium text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded text-[11px] border border-emerald-200">
-                          Calculated from your address
+                          Confirmed on WhatsApp
                         </span>
                       )}
                     </div>
 
                     {/* Total */}
                     <div className="flex justify-between pt-2 border-t border-slate-200/60 text-sm">
-                      <span className="font-bold text-slate-800">Total</span>
+                      <span className="font-bold text-slate-800">{isPickup ? "Total" : "Total before delivery"}</span>
                       <span className="font-black text-lg text-slate-900">
                         Rs. {subtotal}
                       </span>

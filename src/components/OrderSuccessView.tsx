@@ -1,3 +1,4 @@
+import { orderWhatsAppUrl } from '../lib/orderWhatsApp';
 import { orderTrackingUrl } from "../lib/orderAccess";
 import React, { useState } from 'react';
 import { Check, CheckCircle2, Copy, Download, FileText, Loader2, Printer, ShoppingBag, Truck } from 'lucide-react';
@@ -30,6 +31,8 @@ export function OrderSuccessView({ order, onClose, onTrack, onReorder }: OrderSu
   return <section className="confirmation-page commerce-surface" aria-labelledby="order-received-title">
     <header className="confirmation-hero commerce-heading"><div className="confirmation-mark"><CheckCircle2 size={29} strokeWidth={1.5} /></div><span className="commerce-eyebrow">THANK YOU FOR CHOOSING BABAY DEE</span><h1 id="order-received-title">Order received.<br /><em>Freshly prepared for you.</em></h1><p>{pickup ? 'We will prepare your basket for collection. Follow its progress using your order code.' : 'Your basket is with us. Save your receipt or copy the private tracking link to follow preparation and delivery.'}</p></header>
     <div className="order-reference"><div><small>YOUR ORDER CODE</small><strong>{order.id}<button type="button" className="copy-code" aria-label={copied ? 'Private tracking link copied' : 'Copy private tracking link'} onClick={copy}>{copied ? <Check size={18} /> : <Copy size={18} />}</button></strong></div><button type="button" className="commerce-primary" onClick={onTrack}><Truck size={17} />Track your order</button></div>
+    <p className="commerce-hint">Your order is saved. Send the prepared message on WhatsApp to confirm {pickup ? 'pickup details' : 'the total including delivery'}.</p>
+    <a className="commerce-primary" href={orderWhatsAppUrl(order)}>Continue to WhatsApp</a>
     <OrderReceiptSummary order={order} />
     <div className="receipt-footer"><p>Keep a copy for your records.</p><div className="commerce-actions"><button className="commerce-secondary" onClick={() => openOrderReceipt(order)}><FileText size={15} />View receipt</button><button className="commerce-secondary" onClick={() => downloadOrderReceipt(order)}><Download size={15} />Save</button><button className="commerce-secondary" onClick={() => printOrderReceipt(order)}><Printer size={15} />Print</button></div></div>
     {email && order.orderAccessToken && <details className="email-receipt"><summary>Email a copy of your receipt</summary><form onSubmit={sendReceipt}><p>Send to the email address provided at checkout: {email}</p><button className="commerce-primary" disabled={sending}>{sending && <Loader2 size={15} className="animate-spin" />}{sending ? 'Sending...' : 'Send receipt'}</button></form></details>}

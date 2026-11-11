@@ -33,7 +33,7 @@ const FAQ_DATA: FAQItem[] = [
     id: "delivery-1",
     category: "delivery",
     question: "Which areas in Rawalpindi and Islamabad do you deliver to?",
-    answer: "We deliver to all major areas across Rawalpindi and Islamabad, including Gulrez Housing Scheme, Bahria Town (Phases 1-8), DHA, G-Sectors, F-Sectors, I-Sectors, Saddar, Chaklala Scheme 3, and surrounding areas. Our delivery charges are calculated transparently based on the distance from our milling facility at Gulrez Phase 3, Rawalpindi."
+    answer: "We deliver to all major areas across Rawalpindi and Islamabad, including Gulrez Housing Scheme, Bahria Town (Phases 1-8), DHA, G-Sectors, F-Sectors, I-Sectors, Saddar, Chaklala Scheme 3, and surrounding areas. Delivery charges are calculated separately, and the total price including delivery is shared through WhatsApp."
   },
   {
     id: "delivery-2",

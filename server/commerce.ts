@@ -22,7 +22,7 @@ export function parseCheckout(body: any, key: unknown) {
     return { id: item.id, quantity: item.quantity };
   }).sort((a,b) => a.id.localeCompare(b.id));
   if (new Set(cleanItems.map(item => item.id)).size !== cleanItems.length) throw new CommerceError('Duplicate basket items are not allowed.');
-  return { key, checkoutContext: body.checkoutContext as string, addressVersion: body.addressVersion as number, name: body.name.trim(), phone: normalizePhone(body.phone), email: body.email?.trim() || '', address: pickup ? 'Store pickup' : body.address, fulfillmentType: pickup ? 'pickup' : 'delivery', deliveryDate: body.deliveryDate as string, deliverySlot: body.deliverySlot as string, items: cleanItems, quoteToken: pickup ? '' : body.deliveryQuoteToken as string };
+  return { key, checkoutContext: body.checkoutContext as string, addressVersion: body.addressVersion as number, name: body.name.trim(), phone: normalizePhone(body.phone), email: body.email?.trim() || '', address: pickup ? 'Store pickup' : body.address.trim(), fulfillmentType: pickup ? 'pickup' : 'delivery', deliveryDate: body.deliveryDate as string, deliverySlot: body.deliverySlot as string, items: cleanItems };
 }
 export interface StoredOrder { id: string; document: any; order_access_hash: string; idempotency_key: string; checkout_context: string; request_hash: string; access_expires_at: string }
 export interface CommerceRepository {
@@ -65,26 +65,24 @@ export async function authorizeOrder(repository: CommerceRepository, id: unknown
   if (!record || !/^[a-f0-9]{64}$/.test(record.order_access_hash) || !timingSafeEqual(Buffer.from(record.order_access_hash),Buffer.from(digest)) || (!Number.isFinite(Date.parse(record.access_expires_at)) || Date.parse(record.access_expires_at) <= Date.now())) throw new CommerceError('Order access could not be verified.',404,'ORDER_NOT_FOUND');
   return record;
 }
-export async function checkout(body: any, key: unknown, dependencies: { repository: CommerceRepository; catalog(): Promise<any[]>; quote(input: ReturnType<typeof parseCheckout>): Promise<any> }) {
+export async function checkout(body: any, key: unknown, dependencies: { repository: CommerceRepository; catalog(): Promise<any[]> }) {
   const input = parseCheckout(body,key);
-  // The signed token changes on renewal. Compare destination/pricing claims only
-  // for retry identity; the actual signature is still verified before a new order.
-  let destination:any = null;
-  if (input.fulfillmentType === 'delivery') {
-    try { const claims=JSON.parse(Buffer.from(input.quoteToken.split('.')[0],'base64url').toString()); destination={latitude:claims.latitude,longitude:claims.longitude,deliveryCharge:claims.deliveryCharge}; }
-    catch { throw new CommerceError('Calculate delivery charges before placing your order.',409,'QUOTE_REQUIRED'); }
-  }
-  const { key:_key, quoteToken:_quoteToken,addressVersion:_addressVersion,...semantic } = input;
-  const requestHash = hash(JSON.stringify({...semantic,destination}));
+  const { key:_key, addressVersion:_addressVersion, ...semantic } = input;
+  const requestHash = hash(JSON.stringify(semantic));
   const existing = await dependencies.repository.findRetry(input.checkoutContext,input.key);
   const response = (record:StoredOrder,created:boolean) => { const token = orderAccessToken(record); return {success:true,orderId:record.id,order:{...record.document,orderAccessToken:token},orderAccessToken:token,created}; };
   if (existing) { if(existing.request_hash !== requestHash || existing.idempotency_key !== input.key) throw new CommerceError('This checkout retry contains different details.',409,'IDEMPOTENCY_CONFLICT'); return response(existing,false); }
-  const quote = input.fulfillmentType === 'delivery' ? await dependencies.quote(input) : null;
   let items:any[];
   try { items = priceCart(input.items,await dependencies.catalog()); } catch(error) { throw new CommerceError(error instanceof Error ? error.message : 'Refresh your basket.',409,'CART_CHANGED'); }
   const subtotal = Math.round(items.reduce((sum,item) => sum + item.price * item.quantity,0) * 100) / 100;
   const now = new Date().toISOString(), id = `BDEC-${randomUUID().replaceAll('-','')}`;
-  const document = { id, fulfillmentType:input.fulfillmentType, customer:{name:input.name,phone:input.phone,email:input.email || undefined,address:input.address,city:quote?.city || '',area:input.fulfillmentType==='pickup'?'Store pickup':quote?.area||'',latitude:quote?.latitude,longitude:quote?.longitude}, items, subtotal, deliveryCharges:quote?.deliveryCharge || 0, discount:0, total:subtotal+(quote?.deliveryCharge || 0), paymentMethod:input.fulfillmentType === 'pickup' ? 'Pay at Store Counter' : 'Cash on Delivery', paymentStatus:'unpaid', status:'Order Placed', statusHistory:[{status:'Order Placed',time:now,detail:'Order received.'}], createdAt:now, deliveryDate:input.deliveryDate,deliverySlot:input.deliverySlot, deliveryDetails:quote ? {distanceKm:quote.distanceKm,latitude:quote.latitude,longitude:quote.longitude,locationPrecision:quote.type,matchedAddress:quote.matchedAddress,geocodedLatitude:quote.geocodedLatitude,geocodedLongitude:quote.geocodedLongitude,sourcePrecision:quote.sourcePrecision,actualDeliveryFee:quote.deliveryCharge} : undefined };
+  const document = {
+    id, fulfillmentType: input.fulfillmentType,
+    customer: {name:input.name, phone:input.phone, email:input.email || undefined, address:input.address, city:'', area:input.fulfillmentType==='pickup'?'Store pickup':''},
+    items, subtotal, deliveryCharges:0, deliveryChargeStatus:input.fulfillmentType==='delivery'?'pending':'confirmed', discount:0, total:subtotal,
+    paymentMethod:input.fulfillmentType==='pickup'?'Pay at Store Counter':'Cash on Delivery', paymentStatus:'unpaid', status:'Order Placed',
+    statusHistory:[{status:'Order Placed',time:now,detail:'Order received.'}], createdAt:now, deliveryDate:input.deliveryDate, deliverySlot:input.deliverySlot,
+  };
   const record:StoredOrder = {id,document,checkout_context:input.checkoutContext,idempotency_key:input.key,request_hash:requestHash,order_access_hash:'',access_expires_at:new Date(Date.now()+90*86400000).toISOString()};
   record.order_access_hash = hash(orderAccessToken(record));
   const placed = await dependencies.repository.place(record);
